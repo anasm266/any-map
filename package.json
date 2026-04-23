@@ -43,6 +43,11 @@
     "node": ">=20.0.0"
   },
   "packageManager": "pnpm@10.33.1",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
