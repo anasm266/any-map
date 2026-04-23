@@ -1,5 +1,5 @@
 import ts from "typescript";
-import type { AnySource, SourceRanked } from "../types.js";
+import type { AnySource, GreedyCoverPick, SourceKind, SourceRanked } from "../types.js";
 import type {
   EdgeReason,
   GraphEdge,
@@ -7,6 +7,7 @@ import type {
   GraphNodeMutable,
   SerializedGraph,
 } from "./graph-types.js";
+import type { TraceHop } from "./trace-types.js";
 import { isFromNodeModulesOrDts, toProjectRelativePath } from "./load-project.js";
 import { makeNodeId } from "./node-id.js";
 
@@ -452,6 +453,152 @@ export class GraphBuilder {
   /**
    * Blast radius (PLAN §5.4a): |{ n : source ∈ n.infectedBy }| after propagation.
    */
+  /** Count of graph nodes with non-empty `infectedBy` after `propagate()`. */
+  getInfectedNodeCount(): number {
+    let c = 0;
+    for (const n of this.nodes.values()) {
+      if (n.infectedBy.size > 0) c += 1;
+    }
+    return c;
+  }
+
+  getEdges(): GraphEdge[] {
+    return this.edgeList;
+  }
+
+  /**
+   * Greedy set-cover: repeatedly pick the `any` source that covers the most still-uncovered infected nodes.
+   */
+  greedySetCoverPicks(blastRanked: SourceRanked[]): GreedyCoverPick[] {
+    const universeSize = this.getInfectedNodeCount();
+    if (universeSize === 0) return [];
+
+    const meta = new Map<string, SourceRanked>();
+    for (const r of blastRanked) {
+      if (r.graphNodeId) meta.set(r.graphNodeId, r);
+    }
+
+    const universe = new Set<string>();
+    for (const n of this.nodes.values()) {
+      if (n.infectedBy.size > 0) universe.add(n.id);
+    }
+
+    const sourceIds = [...this.nodes.values()]
+      .filter((n) => n.isSource && n.sourceKind !== undefined)
+      .map((n) => n.id);
+
+    const uncovered = new Set(universe);
+    const picks: GreedyCoverPick[] = [];
+    let cumulative = 0;
+    let pickNum = 0;
+
+    while (uncovered.size > 0) {
+      let bestId: string | undefined;
+      let bestGain = -1;
+
+      for (const sid of sourceIds) {
+        let gain = 0;
+        for (const n of this.nodes.values()) {
+          if (n.infectedBy.has(sid) && uncovered.has(n.id)) gain++;
+        }
+        if (gain > bestGain) {
+          bestGain = gain;
+          bestId = sid;
+        } else if (gain === bestGain && gain > 0 && bestId !== undefined) {
+          const b1 = meta.get(bestId)?.blastRadius ?? 0;
+          const b2 = meta.get(sid)?.blastRadius ?? 0;
+          if (b2 > b1) bestId = sid;
+          else if (b2 === b1 && sid.localeCompare(bestId) < 0) bestId = sid;
+        }
+      }
+
+      if (bestGain <= 0 || bestId === undefined) break;
+
+      let newCov = 0;
+      for (const n of this.nodes.values()) {
+        if (n.infectedBy.has(bestId) && uncovered.has(n.id)) {
+          uncovered.delete(n.id);
+          newCov++;
+        }
+      }
+
+      cumulative += newCov;
+      pickNum++;
+      const m = meta.get(bestId)!;
+      const node = this.nodes.get(bestId)!;
+      picks.push({
+        pick: pickNum,
+        graphNodeId: bestId,
+        filePath: node.filePath,
+        line: node.line,
+        column: node.column,
+        name: node.name,
+        sourceKind: node.sourceKind!,
+        blastRadius: m.blastRadius,
+        blastRank: m.rank,
+        newlyCoveredNodes: newCov,
+        cumulativeCoveredNodes: cumulative,
+        cumulativeCoveragePct: Math.round((100 * cumulative) / universeSize),
+      });
+    }
+
+    return picks;
+  }
+
+  /**
+   * Exact match on project-relative path (forward slashes) and reported identifier position.
+   */
+  getTraceHop(nodeId: string): TraceHop | undefined {
+    const n = this.nodes.get(nodeId);
+    if (!n) return undefined;
+    return {
+      nodeId: n.id,
+      filePath: n.filePath,
+      line: n.line,
+      column: n.column,
+      name: n.name,
+      kind: n.kind,
+    };
+  }
+
+  /** Source ids in `targetId`'s infection set that are graph `any` origins. */
+  listInfectedSourceIds(targetId: string): string[] {
+    const n = this.nodes.get(targetId);
+    if (!n) return [];
+    return [...n.infectedBy]
+      .filter((id) => {
+        const s = this.nodes.get(id);
+        return Boolean(s?.isSource && s.sourceKind);
+      })
+      .sort((a, b) => a.localeCompare(b));
+  }
+
+  getAnySourceRow(
+    nodeId: string,
+  ):
+    | { filePath: string; line: number; column: number; name: string; sourceKind: SourceKind }
+    | undefined {
+    const n = this.nodes.get(nodeId);
+    if (!n?.isSource || !n.sourceKind) return undefined;
+    return {
+      filePath: n.filePath,
+      line: n.line,
+      column: n.column,
+      name: n.name,
+      sourceKind: n.sourceKind,
+    };
+  }
+
+  findNodeIdAtLocation(filePath: string, line: number, column: number): string | undefined {
+    const norm = filePath.replace(/\\/g, "/");
+    const matches = [...this.nodes.values()].filter(
+      (n) => n.filePath === norm && n.line === line && n.column === column,
+    );
+    if (matches.length === 0) return undefined;
+    matches.sort((a, b) => a.id.localeCompare(b.id));
+    return matches[0]!.id;
+  }
+
   rankSourcesByBlast(): SourceRanked[] {
     const rows = [...this.nodes.values()]
       .filter((n) => n.isSource && n.sourceKind !== undefined)
