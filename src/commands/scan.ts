@@ -1,25 +1,66 @@
 import Table from "cli-table3";
 import pc from "picocolors";
-import type { ScanSummary } from "../types.js";
-import { classifyScan, type ScanOptions } from "../analyzer/run-scan.js";
+import { runFullScan } from "../analyzer/run-scan.js";
+import type { ScanSummary, SourceKind } from "../types.js";
+import { serializedGraphToDot } from "../format/to-dot.js";
+import { applyScanFailureResult, evaluateScanFailure } from "./scan-failure.js";
+
+export type ScanCliFormat = "table" | "json" | "dot";
+
+export interface ScanCliOptions {
+  format?: ScanCliFormat;
+  /** @deprecated use format === "json" */
+  json?: boolean;
+  dumpGraph?: boolean;
+  top?: number;
+  sourceKinds?: SourceKind[];
+  ignoreGlobs?: string[];
+  failAbove?: number;
+  failCoveragePct?: number;
+}
 
 export async function runScanCommand(
   targetPath: string | undefined,
-  options: { json?: boolean; dumpGraph?: boolean; top?: number },
+  options: ScanCliOptions,
 ): Promise<void> {
-  const scanOpts: ScanOptions = { targetPath: targetPath ?? "." };
-  if (options.json === true) scanOpts.json = true;
-  if (options.dumpGraph === true) scanOpts.dumpGraph = true;
-  if (options.top !== undefined) scanOpts.top = options.top;
+  const basePath = targetPath ?? ".";
+  const format: ScanCliFormat = options.format ?? (options.json === true ? "json" : "table");
 
-  const result = classifyScan(scanOpts);
+  const scanOpts = {
+    targetPath: basePath,
+    sourceKinds: options.sourceKinds,
+    ignoreGlobs: options.ignoreGlobs,
+    top: options.top,
+  };
 
-  if (scanOpts.dumpGraph || scanOpts.json) {
-    console.log(JSON.stringify(result, null, 2));
+  if (options.dumpGraph === true) {
+    const { top, ...rest } = scanOpts;
+    void top;
+    const { summary, serializedGraph } = runFullScan(rest);
+    console.log(JSON.stringify(serializedGraph, null, 2));
+    applyScanFailureResult(evaluateScanFailure(summary, options));
     return;
   }
 
-  const summary = result as ScanSummary;
+  const { summary, serializedGraph } = runFullScan(scanOpts);
+
+  if (format === "json") {
+    console.log(JSON.stringify(summary, null, 2));
+    applyScanFailureResult(evaluateScanFailure(summary, options));
+    return;
+  }
+
+  if (format === "dot") {
+    console.log(serializedGraphToDot(serializedGraph));
+    applyScanFailureResult(evaluateScanFailure(summary, options));
+    return;
+  }
+
+  printScanTables(summary);
+  applyScanFailureResult(evaluateScanFailure(summary, options));
+}
+
+function printScanTables(summary: ScanSummary): void {
   const n = summary.sources.length;
   const files = summary.fileCount;
 

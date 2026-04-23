@@ -66,6 +66,16 @@ describe("scan smoke (mixed kinds)", () => {
       summary.greedyCoverPicks[summary.greedyCoverPicks.length - 1]!.cumulativeCoveragePct,
     ).toBe(100);
   });
+
+  it("filters by sourceKinds (m6)", () => {
+    const full = classifyScan({ targetPath: smokeRoot });
+    const onlyExplicit = classifyScan({
+      targetPath: smokeRoot,
+      sourceKinds: ["explicit-any"],
+    });
+    expect(onlyExplicit.sources.length).toBeLessThan(full.sources.length);
+    expect(onlyExplicit.sources.every((s) => s.sourceKind === "explicit-any")).toBe(true);
+  });
 });
 
 function isSortedLikeClassifier(sources: AnySource[]): boolean {

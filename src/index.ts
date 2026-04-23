@@ -1,6 +1,13 @@
 export type { AnySource, GreedyCoverPick, ScanSummary, SourceKind, SourceRanked } from "./types.js";
-export { classifyScan } from "./analyzer/run-scan.js";
-export type { ScanOptions, ScanResult } from "./analyzer/run-scan.js";
+export { classifyScan, runFullScan } from "./analyzer/run-scan.js";
+export type { FullScanResult, ScanOptions, ScanResult } from "./analyzer/run-scan.js";
+export {
+  filterSources,
+  parseIgnoreGlobsList,
+  parseSourceKindsList,
+} from "./analyzer/filter-sources.js";
+export type { SourceFilters } from "./analyzer/filter-sources.js";
+export { serializedGraphToDot } from "./format/to-dot.js";
 export {
   createProgramForDirectory,
   resolveScanRoot,

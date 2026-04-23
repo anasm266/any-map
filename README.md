@@ -18,13 +18,21 @@ A single `any` in one utility file can silently propagate through assignments, d
 
 ## What it does (v1)
 
-| Command                            | Purpose                                                                                    |
-| ---------------------------------- | ------------------------------------------------------------------------------------------ |
-| `any-map scan [path]`              | Analyze a TS project; rank `any` sources by intra-module blast radius (`--top`, `--json`). |
-| `any-map trace <loc> [path]`       | Print type-flow paths from each `any` source to the symbol at `loc` (`file:line:col`).     |
-| `any-map graph [--output out.dot]` | Emit the full infection graph as Graphviz DOT.                                             |
+| Command                      | Purpose                                                                                |
+| ---------------------------- | -------------------------------------------------------------------------------------- |
+| `any-map scan [path]`        | Analyze a TS project; table / JSON / DOT; filters + CI thresholds (m6).                |
+| `any-map trace <loc> [path]` | Print type-flow paths from each `any` source to the symbol at `loc` (`file:line:col`). |
+| `any-map graph [path]`       | Emit the intra-module type-flow graph as Graphviz DOT (`-o out.dot` or stdout).        |
 
-`any-map scan` flags today: `--json` (includes `sourcesRankedByBlast`, `greedyCoverPicks`, `infectedNodeCount`), `--dump-graph` (nodes, edges, `infectedBy`), `--top <n>` (limit blast-ranked rows). Human output lists **greedy set-cover** fix order (cumulative % of infected nodes) then blast-ranked sources.
+`any-map scan`: `--format table|json|dot` (or legacy `--json`), `--dump-graph` (JSON graph snapshot), `--top`, `--source-kinds`, `--ignore` (comma-separated picomatch globs), `--fail-above N`, `--fail-coverage P` (top-3 greedy cumulative % must be ≥ P). CI: reusable workflow step in [.github/actions/any-map-scan/action.yml](.github/actions/any-map-scan/action.yml) (`npx any-map@… scan . ${{ inputs.args }}`).
+
+### Snapshot benchmark (fixture)
+
+| Snapshot               | TS project files | `any` sources | Infected graph nodes | Top-3 greedy cum. % |
+| ---------------------- | ---------------- | ------------- | -------------------- | ------------------- |
+| `tests/fixtures/smoke` | 1                | 4             | 5                    | 80%                 |
+
+(Larger repo numbers will ship in v1 benchmark table; this row is reproducible via `pnpm build` + `classifyScan({ targetPath: "tests/fixtures/smoke" })`.)
 
 `any-map trace src/foo.ts:12:5` prints forward hops (`reason` per edge) from each source to the traced binding; use `--json` for machine-readable `TraceReport`.
 
@@ -75,9 +83,9 @@ Full algorithm details in [PLAN.md §5](./PLAN.md#5-algorithms).
 - [x] **m3:** intra-module type-flow graph; `any-map scan --dump-graph` (library: `buildSerializedGraph` / `GraphBuilder`).
 - [x] **m4:** forward propagation + blast-radius ranking; `scan --top N`; JSON field `sourcesRankedByBlast` (rank, blast, graph node id).
 - [x] **m5:** greedy set-cover table + JSON; `any-map trace`; `scripts/overlap-analysis.mjs` after build.
-- [ ] v0.1 (remaining): benchmarks table, `--fail-above`, polish
-- [ ] v0.4: `--format dot`, `--fail-above`, GitHub Action
-- [ ] v1.0: benchmark table against 4 real repos, blog post, launch
+- [x] **m6:** `--format table|json|dot`, `any-map graph`, `--source-kinds`, `--ignore`, `--fail-above`, `--fail-coverage`, composite GitHub Action.
+- [ ] v0.1 (remaining): real-repo benchmark table, polish
+- [ ] v1.0: launch blog post, broader benchmarks
 
 Detailed week-by-week milestones in [PLAN.md](./PLAN.md).
 
