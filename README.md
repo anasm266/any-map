@@ -18,11 +18,11 @@ A single `any` in one utility file can silently propagate through assignments, d
 
 ## What it does (v1)
 
-| Command | Purpose |
-|---|---|
-| `any-map scan [path]` | Analyze a TS project; rank sources by blast radius + greedy set-cover. |
-| `any-map trace <file>:<line>:<col>` | Trace a specific infected symbol back to contributing sources. |
-| `any-map graph [--output out.dot]` | Emit the full infection graph as Graphviz DOT. |
+| Command                             | Purpose                                                                |
+| ----------------------------------- | ---------------------------------------------------------------------- |
+| `any-map scan [path]`               | Analyze a TS project; rank sources by blast radius + greedy set-cover. |
+| `any-map trace <file>:<line>:<col>` | Trace a specific infected symbol back to contributing sources.         |
+| `any-map graph [--output out.dot]`  | Emit the full infection graph as Graphviz DOT.                         |
 
 ### Output preview (target for v1)
 
@@ -58,12 +58,12 @@ Full algorithm details in [PLAN.md §5](./PLAN.md#5-algorithms).
 
 ## Why not existing tools?
 
-| Tool | What it tells you | What any-map adds |
-|---|---|---|
-| `tsc --noImplicitAny` | Every spot where `any` is inferred | — |
-| `@typescript-eslint/no-explicit-any` | Every spot where `any` is written | — |
-| `type-coverage` | % of typed identifiers | — |
-| **any-map** | **Which few sources are responsible for the most type erosion, and the shortest fix path** | Graph-based propagation + set-cover ranking |
+| Tool                                 | What it tells you                                                                          | What any-map adds                           |
+| ------------------------------------ | ------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| `tsc --noImplicitAny`                | Every spot where `any` is inferred                                                         | —                                           |
+| `@typescript-eslint/no-explicit-any` | Every spot where `any` is written                                                          | —                                           |
+| `type-coverage`                      | % of typed identifiers                                                                     | —                                           |
+| **any-map**                          | **Which few sources are responsible for the most type erosion, and the shortest fix path** | Graph-based propagation + set-cover ranking |
 
 ## Roadmap
 

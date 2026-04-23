@@ -1,4 +1,5 @@
 import js from "@eslint/js";
+import globals from "globals";
 import tseslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 
@@ -15,6 +16,9 @@ export default [
         ecmaVersion: "latest",
         sourceType: "module",
       },
+      globals: {
+        ...globals.node,
+      },
     },
     plugins: {
       "@typescript-eslint": tseslint,
@@ -28,6 +32,12 @@ export default [
       ],
       "@typescript-eslint/consistent-type-imports": "error",
       "no-console": ["warn", { allow: ["warn", "error"] }],
+    },
+  },
+  {
+    files: ["src/commands/**/*.ts"],
+    rules: {
+      "no-console": "off",
     },
   },
 ];

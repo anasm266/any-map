@@ -12,10 +12,12 @@ A clear, concise description.
 Smallest TypeScript project that reproduces the issue. A gist or a tiny repo link is ideal.
 
 **Expected vs actual**
+
 - Expected: …
 - Actual: …
 
 **Environment**
+
 - any-map version:
 - Node version:
 - TypeScript version:
