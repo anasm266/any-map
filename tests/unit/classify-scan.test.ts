@@ -58,6 +58,13 @@ describe("scan smoke (mixed kinds)", () => {
     expect(top2.sourcesRankedByBlast[1]?.rank).toBe(2);
   });
 
+  it("honors --top for greedyCoverPicks length", () => {
+    const full = classifyScan({ targetPath: smokeRoot });
+    const top2 = classifyScan({ targetPath: smokeRoot, top: 2 });
+    expect(full.greedyCoverPicks.length).toBeGreaterThan(2);
+    expect(top2.greedyCoverPicks).toHaveLength(2);
+  });
+
   it("reports infected node count and greedy cover picks (m5)", () => {
     const summary = classifyScan({ targetPath: smokeRoot });
     expect(summary.infectedNodeCount).toBeGreaterThan(0);

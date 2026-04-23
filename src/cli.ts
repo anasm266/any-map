@@ -60,7 +60,10 @@ program
   .option("--format <mode>", "Output: table, json, or dot (Graphviz)")
   .option("--json", "Same as --format json", false)
   .option("--dump-graph", "Emit intra-module graph JSON (nodes + edges + infectedBy)", false)
-  .option("--top <n>", "Limit blast-ranked rows in table / JSON `sourcesRankedByBlast`")
+  .option(
+    "--top <n>",
+    "Limit rows in both table sections and in JSON `greedyCoverPicks` / `sourcesRankedByBlast` (CI thresholds still use full greedy coverage)",
+  )
   .option(
     "--source-kinds <list>",
     "Comma-separated kinds: explicit-any, as-any, untyped-import, untyped-return, catch-binding, implicit-param",

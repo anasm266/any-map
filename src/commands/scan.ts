@@ -1,6 +1,6 @@
 import Table from "cli-table3";
 import pc from "picocolors";
-import { buildScanOptions, runFullScan } from "../analyzer/run-scan.js";
+import { applyTopToScanSummary, buildScanOptions, runFullScan } from "../analyzer/run-scan.js";
 import type { ScanSummary, SourceKind } from "../types.js";
 import { serializedGraphToDot } from "../format/to-dot.js";
 import { applyScanFailureResult, evaluateScanFailure } from "./scan-failure.js";
@@ -26,21 +26,20 @@ export async function runScanCommand(
   const basePath = targetPath ?? ".";
   const format: ScanCliFormat = options.format ?? (options.json === true ? "json" : "table");
 
+  const scanOpts = buildScanOptions(basePath, options.sourceKinds, options.ignoreGlobs);
+
   if (options.dumpGraph === true) {
-    const { summary, serializedGraph } = runFullScan(
-      buildScanOptions(basePath, options.sourceKinds, options.ignoreGlobs),
-    );
+    const { summary, serializedGraph } = runFullScan(scanOpts);
     console.log(JSON.stringify(serializedGraph, null, 2));
     applyScanFailureResult(evaluateScanFailure(summary, options));
     return;
   }
 
-  const { summary, serializedGraph } = runFullScan(
-    buildScanOptions(basePath, options.sourceKinds, options.ignoreGlobs, options.top),
-  );
+  const { summary, serializedGraph } = runFullScan(scanOpts);
+  const displaySummary = applyTopToScanSummary(summary, options.top);
 
   if (format === "json") {
-    console.log(JSON.stringify(summary, null, 2));
+    console.log(JSON.stringify(displaySummary, null, 2));
     applyScanFailureResult(evaluateScanFailure(summary, options));
     return;
   }
@@ -51,7 +50,7 @@ export async function runScanCommand(
     return;
   }
 
-  printScanTables(summary);
+  printScanTables(displaySummary);
   applyScanFailureResult(evaluateScanFailure(summary, options));
 }
 
@@ -59,11 +58,12 @@ function printScanTables(summary: ScanSummary): void {
   const n = summary.sources.length;
   const files = summary.fileCount;
 
+  console.log(pc.dim(`Scanning ${files} project file${files === 1 ? "" : "s"}...`));
   console.log(
     pc.bold(
       `Found ${n} any source${n === 1 ? "" : "s"}, ${summary.infectedNodeCount} infected graph node${
         summary.infectedNodeCount === 1 ? "" : "s"
-      } in ${files} project file${files === 1 ? "" : "s"}.`,
+      }.`,
     ),
   );
 

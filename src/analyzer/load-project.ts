@@ -81,3 +81,12 @@ export function toProjectRelativePath(absoluteFile: string, rootDir: string): st
 export function isFromNodeModulesOrDts(sf: ts.SourceFile): boolean {
   return sf.isDeclarationFile || sf.fileName.includes(`${path.sep}node_modules${path.sep}`);
 }
+
+/**
+ * Plain JS inputs under `allowJs`: untyped parameters/returns/imports/catch resolve to `any` by language
+ * design, not "developer chose any". Sources that use only type inference must skip these files.
+ */
+export function isJavaScriptInputFile(sf: ts.SourceFile): boolean {
+  const ext = path.extname(sf.fileName).toLowerCase();
+  return ext === ".js" || ext === ".jsx" || ext === ".mjs" || ext === ".cjs";
+}
