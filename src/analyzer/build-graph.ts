@@ -450,9 +450,6 @@ export class GraphBuilder {
     return c;
   }
 
-  /**
-   * Blast radius (PLAN §5.4a): |{ n : source ∈ n.infectedBy }| after propagation.
-   */
   /** Count of graph nodes with non-empty `infectedBy` after `propagate()`. */
   getInfectedNodeCount(): number {
     let c = 0;
@@ -468,6 +465,7 @@ export class GraphBuilder {
 
   /**
    * Greedy set-cover: repeatedly pick the `any` source that covers the most still-uncovered infected nodes.
+   * Uses per-source infected sets so each pass is O(sources × min(|infected(s)|, |uncovered|)), not O(sources × |nodes|).
    */
   greedySetCoverPicks(blastRanked: SourceRanked[]): GreedyCoverPick[] {
     const universeSize = this.getInfectedNodeCount();
@@ -487,6 +485,15 @@ export class GraphBuilder {
       .filter((n) => n.isSource && n.sourceKind !== undefined)
       .map((n) => n.id);
 
+    const infectedNodesPerSource = new Map<string, Set<string>>();
+    for (const sid of sourceIds) {
+      const set = new Set<string>();
+      for (const n of this.nodes.values()) {
+        if (n.infectedBy.has(sid)) set.add(n.id);
+      }
+      infectedNodesPerSource.set(sid, set);
+    }
+
     const uncovered = new Set(universe);
     const picks: GreedyCoverPick[] = [];
     let cumulative = 0;
@@ -497,10 +504,18 @@ export class GraphBuilder {
       let bestGain = -1;
 
       for (const sid of sourceIds) {
+        const infected = infectedNodesPerSource.get(sid)!;
         let gain = 0;
-        for (const n of this.nodes.values()) {
-          if (n.infectedBy.has(sid) && uncovered.has(n.id)) gain++;
+        if (infected.size <= uncovered.size) {
+          for (const id of infected) {
+            if (uncovered.has(id)) gain++;
+          }
+        } else {
+          for (const id of uncovered) {
+            if (infected.has(id)) gain++;
+          }
         }
+
         if (gain > bestGain) {
           bestGain = gain;
           bestId = sid;
@@ -515,11 +530,8 @@ export class GraphBuilder {
       if (bestGain <= 0 || bestId === undefined) break;
 
       let newCov = 0;
-      for (const n of this.nodes.values()) {
-        if (n.infectedBy.has(bestId) && uncovered.has(n.id)) {
-          uncovered.delete(n.id);
-          newCov++;
-        }
+      for (const id of infectedNodesPerSource.get(bestId)!) {
+        if (uncovered.delete(id)) newCov++;
       }
 
       cumulative += newCov;
