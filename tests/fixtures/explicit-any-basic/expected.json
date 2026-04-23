@@ -1,0 +1,25 @@
+{
+  "expected": [
+    {
+      "file": "src/index.ts",
+      "line": 1,
+      "column": 14,
+      "name": "explicit",
+      "sourceKind": "explicit-any"
+    },
+    {
+      "file": "src/index.ts",
+      "line": 3,
+      "column": 28,
+      "name": "x",
+      "sourceKind": "explicit-any"
+    },
+    {
+      "file": "src/index.ts",
+      "line": 7,
+      "column": 17,
+      "name": "returnsAny",
+      "sourceKind": "explicit-any"
+    }
+  ]
+}

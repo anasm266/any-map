@@ -2,6 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 
+export function countProjectSourceFiles(program: ts.Program): number {
+  let n = 0;
+  for (const sf of program.getSourceFiles()) {
+    if (!isFromNodeModulesOrDts(sf)) n += 1;
+  }
+  return n;
+}
+
 function toPosix(p: string): string {
   return p.split(path.sep).join(path.posix.sep);
 }

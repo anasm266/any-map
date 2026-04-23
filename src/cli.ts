@@ -11,7 +11,7 @@ program
 
 program
   .command("scan")
-  .description("Find explicit `: any` annotations (milestone m1).")
+  .description("Classify TypeScript `any` sources (milestone m2: six kinds).")
   .argument("[path]", "Project file, directory, or tsconfig root", ".")
   .option("--json", "Emit machine-readable JSON", false)
   .action(async (path: string | undefined, opts: { json?: boolean }) => {

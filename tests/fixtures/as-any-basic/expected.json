@@ -1,0 +1,11 @@
+{
+  "expected": [
+    {
+      "file": "src/index.ts",
+      "line": 1,
+      "column": 14,
+      "name": "asserted",
+      "sourceKind": "as-any"
+    }
+  ]
+}

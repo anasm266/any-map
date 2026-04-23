@@ -1,0 +1,11 @@
+{
+  "expected": [
+    {
+      "file": "src/index.ts",
+      "line": 1,
+      "column": 8,
+      "name": "legacy",
+      "sourceKind": "untyped-import"
+    }
+  ]
+}

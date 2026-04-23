@@ -1,0 +1,11 @@
+{
+  "expected": [
+    {
+      "file": "src/index.ts",
+      "line": 1,
+      "column": 23,
+      "name": "x",
+      "sourceKind": "implicit-param"
+    }
+  ]
+}
