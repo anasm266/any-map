@@ -1,5 +1,7 @@
 import type { AnySource, ScanSummary, SourceRanked } from "../types.js";
-import { GraphBuilder, buildSerializedGraph } from "./build-graph.js";
+import { GraphBuilder } from "./build-graph.js";
+import type { SourceFilters } from "./filter-sources.js";
+import { filterSources } from "./filter-sources.js";
 import { findAnySources } from "./classify-any-sources.js";
 import type { SerializedGraph } from "./graph-types.js";
 import {
@@ -8,7 +10,7 @@ import {
   resolveScanRoot,
 } from "./load-project.js";
 
-export interface ScanOptions {
+export interface ScanOptions extends SourceFilters {
   targetPath: string;
   json?: boolean;
   dumpGraph?: boolean;
@@ -17,6 +19,11 @@ export interface ScanOptions {
 }
 
 export type ScanResult = ScanSummary | SerializedGraph;
+
+export interface FullScanResult {
+  summary: ScanSummary;
+  serializedGraph: SerializedGraph;
+}
 
 function sourceKey(s: Pick<AnySource, "filePath" | "line" | "column" | "name">): string {
   return `${s.filePath}:${s.line}:${s.column}:${s.name}`;
@@ -54,19 +61,14 @@ function mergeRankedWithOrphans(ranked: SourceRanked[], allSources: AnySource[])
 }
 
 /**
- * Classify `any` sources (m2), intra-module graph + propagation + blast ranking (m4), optional graph JSON (m3).
+ * Single graph build: summary + serialized graph (for DOT / `--dump-graph` / CI).
  */
-export function classifyScan(options: ScanOptions & { dumpGraph: true }): SerializedGraph;
-export function classifyScan(options?: ScanOptions): ScanSummary;
-export function classifyScan(options: ScanOptions = { targetPath: "." }): ScanResult {
+export function runFullScan(options: ScanOptions): FullScanResult {
   const root = resolveScanRoot(options.targetPath);
   const program = createProgramForDirectory(root);
-  const sources = findAnySources(program, root);
+  let sources = findAnySources(program, root);
+  sources = filterSources(sources, options);
   const fileCount = countProjectSourceFiles(program);
-
-  if (options.dumpGraph) {
-    return buildSerializedGraph(program, root, sources);
-  }
 
   const builder = new GraphBuilder(program, root);
   builder.build();
@@ -83,11 +85,27 @@ export function classifyScan(options: ScanOptions = { targetPath: "." }): ScanRe
     ranked = ranked.slice(0, options.top).map((r, i) => ({ ...r, rank: i + 1 }));
   }
 
-  return {
+  const summary: ScanSummary = {
     sources,
     fileCount,
     infectedNodeCount,
     greedyCoverPicks,
     sourcesRankedByBlast: ranked,
   };
+
+  return { summary, serializedGraph: builder.serialize() };
+}
+
+/**
+ * Classify `any` sources (m2), intra-module graph + propagation + blast ranking (m4), optional graph JSON (m3).
+ */
+export function classifyScan(options: ScanOptions & { dumpGraph: true }): SerializedGraph;
+export function classifyScan(options?: ScanOptions): ScanSummary;
+export function classifyScan(options: ScanOptions = { targetPath: "." }): ScanResult {
+  if (options.dumpGraph) {
+    const { top, ...rest } = options;
+    void top;
+    return runFullScan(rest).serializedGraph;
+  }
+  return runFullScan(options).summary;
 }

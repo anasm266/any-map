@@ -1,6 +1,6 @@
 # any-map — Detailed Build Plan
 
-> **Status:** living document. **m5** (greedy set-cover + `trace`) landed; see git tag / changelog.
+> **Status:** living document. **m6** (formats, `graph`, filters, fail thresholds, composite action) landed; see git tag / changelog.
 > **Owner:** @anasm266
 > **Target v1.0 release:** ~7 weeks from kickoff.
 
