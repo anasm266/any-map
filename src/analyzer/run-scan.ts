@@ -33,7 +33,10 @@ function mergeRankedWithOrphans(ranked: SourceRanked[], allSources: AnySource[])
     .filter((s) => !keys.has(sourceKey(s)))
     .sort(
       (a, b) =>
-        a.filePath.localeCompare(b.filePath) || a.line - b.line || a.column - b.column || a.name.localeCompare(b.name),
+        a.filePath.localeCompare(b.filePath) ||
+        a.line - b.line ||
+        a.column - b.column ||
+        a.name.localeCompare(b.name),
     );
   for (const s of extras) {
     out.push({

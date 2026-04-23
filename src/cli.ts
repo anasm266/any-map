@@ -19,7 +19,10 @@ program
   .option("--dump-graph", "Emit intra-module type-flow graph (nodes + edges) as JSON", false)
   .option("--top <n>", "Limit blast-ranked rows in table / JSON `sourcesRankedByBlast`")
   .action(
-    async (path: string | undefined, opts: { json?: boolean; dumpGraph?: boolean; top?: string }) => {
+    async (
+      path: string | undefined,
+      opts: { json?: boolean; dumpGraph?: boolean; top?: string },
+    ) => {
       const flags: { json?: boolean; dumpGraph?: boolean; top?: number } = {};
       if (opts.json === true) flags.json = true;
       if (opts.dumpGraph === true) flags.dumpGraph = true;
