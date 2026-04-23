@@ -20,7 +20,16 @@ export interface AnySource {
   sourceKind: SourceKind;
 }
 
+/** Classifier row + graph metrics (m4). */
+export interface SourceRanked extends AnySource {
+  rank: number;
+  blastRadius: number;
+  graphNodeId: string;
+}
+
 export interface ScanSummary {
   sources: AnySource[];
   fileCount: number;
+  /** `any` sources with blast radius, sorted descending (intra-module graph reachability). */
+  sourcesRankedByBlast: SourceRanked[];
 }

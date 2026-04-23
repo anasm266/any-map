@@ -11,16 +11,30 @@ program
 
 program
   .command("scan")
-  .description("Classify `any` sources (m2) and optionally dump the intra-module graph (m3).")
+  .description(
+    "Classify `any` sources (m2), intra-module graph (m3), blast-ranked output (m4); optional graph JSON dump.",
+  )
   .argument("[path]", "Project file, directory, or tsconfig root", ".")
   .option("--json", "Emit scan summary as JSON", false)
   .option("--dump-graph", "Emit intra-module type-flow graph (nodes + edges) as JSON", false)
-  .action(async (path: string | undefined, opts: { json?: boolean; dumpGraph?: boolean }) => {
-    const flags: { json?: boolean; dumpGraph?: boolean } = {};
-    if (opts.json === true) flags.json = true;
-    if (opts.dumpGraph === true) flags.dumpGraph = true;
-    await runScanCommand(path, flags);
-  });
+  .option("--top <n>", "Limit blast-ranked rows in table / JSON `sourcesRankedByBlast`")
+  .action(
+    async (path: string | undefined, opts: { json?: boolean; dumpGraph?: boolean; top?: string }) => {
+      const flags: { json?: boolean; dumpGraph?: boolean; top?: number } = {};
+      if (opts.json === true) flags.json = true;
+      if (opts.dumpGraph === true) flags.dumpGraph = true;
+      if (opts.top !== undefined) {
+        const n = Number.parseInt(opts.top, 10);
+        if (!Number.isInteger(n) || n < 1) {
+          console.error("any-map scan: --top must be a positive integer");
+          process.exitCode = 1;
+          return;
+        }
+        flags.top = n;
+      }
+      await runScanCommand(path, flags);
+    },
+  );
 
 void program.parseAsync(process.argv).catch((err: unknown) => {
   console.error(err);
