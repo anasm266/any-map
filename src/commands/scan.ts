@@ -1,28 +1,29 @@
+import Table from "cli-table3";
 import pc from "picocolors";
-import { classifyExplicitAnyScan, type ScanM1Options } from "../analyzer/run-scan-m1.js";
+import { classifyScan, type ScanOptions } from "../analyzer/run-scan.js";
 
 export async function runScanCommand(
   targetPath: string | undefined,
   options: { json?: boolean },
 ): Promise<void> {
-  const opts: ScanM1Options = {
+  const opts: ScanOptions = {
     targetPath: targetPath ?? ".",
     json: options.json === true,
   };
 
-  const summary = classifyExplicitAnyScan(opts);
+  const summary = classifyScan(opts);
 
   if (opts.json) {
     console.log(JSON.stringify(summary, null, 2));
     return;
   }
 
-  const n = summary.explicitAnySources.length;
+  const n = summary.sources.length;
   const files = summary.fileCount;
 
   console.log(
     pc.bold(
-      `Found ${n} explicit-any source${n === 1 ? "" : "s"} in ${files} project file${files === 1 ? "" : "s"}.`,
+      `Found ${n} any source${n === 1 ? "" : "s"} in ${files} project file${files === 1 ? "" : "s"}.`,
     ),
   );
 
@@ -31,9 +32,14 @@ export async function runScanCommand(
   }
 
   console.log("");
-  for (const s of summary.explicitAnySources) {
-    console.log(
-      `${pc.dim(s.filePath)}:${s.line}:${s.column}  ${pc.yellow(s.sourceKind)}  ${pc.bold(s.name)}`,
-    );
+  const table = new Table({
+    head: [pc.dim("File"), pc.dim("Line:Col"), pc.dim("Kind"), pc.dim("Name")],
+    wordWrap: true,
+  });
+
+  for (const s of summary.sources) {
+    table.push([s.filePath, `${s.line}:${s.column}`, s.sourceKind, s.name]);
   }
+
+  console.log(table.toString());
 }

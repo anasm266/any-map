@@ -1,8 +1,10 @@
-export type { ExplicitAnySource, ScanSummaryM1, SourceKindExplicitM1 } from "./types.js";
-export { classifyExplicitAnyScan } from "./analyzer/run-scan-m1.js";
-export type { ScanM1Options } from "./analyzer/run-scan-m1.js";
-export { createProgramForDirectory, resolveScanRoot } from "./analyzer/load-project.js";
+export type { AnySource, ScanSummary, SourceKind } from "./types.js";
+export { classifyScan } from "./analyzer/run-scan.js";
+export type { ScanOptions } from "./analyzer/run-scan.js";
 export {
-  findExplicitAnySources,
+  createProgramForDirectory,
+  resolveScanRoot,
   countProjectSourceFiles,
-} from "./analyzer/classify-explicit-any.js";
+} from "./analyzer/load-project.js";
+export { findAnySources } from "./analyzer/classify-any-sources.js";
+export { findExplicitAnySources } from "./analyzer/classify-explicit-any.js";

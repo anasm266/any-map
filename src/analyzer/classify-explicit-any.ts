@@ -1,8 +1,8 @@
 import ts from "typescript";
-import type { ExplicitAnySource, SourceKindExplicitM1 } from "../types.js";
+import type { AnySource } from "../types.js";
 import { isFromNodeModulesOrDts, toProjectRelativePath } from "./load-project.js";
 
-const SOURCE_KIND: SourceKindExplicitM1 = "explicit-any";
+const SOURCE_KIND = "explicit-any" as const;
 
 function isAsAnyAssertion(anyKw: ts.Node): boolean {
   const p = anyKw.parent;
@@ -105,12 +105,9 @@ function locationForReport(decl: ts.Node): ts.Node {
  * Collect every explicit `: any`-style annotation (including `any[]`, `Record<string, any>`, etc.),
  * excluding `as any` / `<any>` / `satisfies any` assertions (handled in m2).
  */
-export function findExplicitAnySources(
-  program: ts.Program,
-  projectRootAbs: string,
-): ExplicitAnySource[] {
+export function findExplicitAnySources(program: ts.Program, projectRootAbs: string): AnySource[] {
   const checker = program.getTypeChecker();
-  const byDeclaration = new Map<ts.Node, ExplicitAnySource>();
+  const byDeclaration = new Map<ts.Node, AnySource>();
 
   const visit = (node: ts.Node): void => {
     if (node.kind === ts.SyntaxKind.AnyKeyword) {
@@ -166,7 +163,7 @@ export function findExplicitAnySources(
       const filePath = toProjectRelativePath(sf.fileName, projectRootAbs);
       const name = getDisplayName(decl);
 
-      const source: ExplicitAnySource = {
+      const source: AnySource = {
         filePath,
         line: line + 1,
         column: character + 1,
@@ -192,12 +189,4 @@ export function findExplicitAnySources(
     if (a.line !== b.line) return a.line - b.line;
     return a.column - b.column;
   });
-}
-
-export function countProjectSourceFiles(program: ts.Program): number {
-  let n = 0;
-  for (const sf of program.getSourceFiles()) {
-    if (!isFromNodeModulesOrDts(sf)) n += 1;
-  }
-  return n;
 }

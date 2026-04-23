@@ -67,7 +67,8 @@ Full algorithm details in [PLAN.md §5](./PLAN.md#5-algorithms).
 
 ## Roadmap
 
-- [ ] v0.1: source classification + blast radius (intra-module)
+- [x] **m2 (current):** all six `any` source kinds; `any-map scan` uses `cli-table3` (or `--json`); see `classifyScan` in the library API.
+- [ ] v0.1: blast radius (intra-module)
 - [ ] v0.2: full graph construction + forward propagation
 - [ ] v0.3: greedy set-cover ranking + `trace` command
 - [ ] v0.4: `--format dot`, `--fail-above`, GitHub Action

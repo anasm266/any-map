@@ -24,14 +24,14 @@ pnpm format      # prettier
 
 ```
 src/
-  analyzer/     # classifier, graph builder, propagator, ranker
+  analyzer/     # classifier (m2), later graph + propagator + ranker
   commands/     # scan, trace, graph CLI commands
-  formatters/   # table, json, dot output
+  formatters/   # (m6) dedicated table/json/dot helpers if split from commands
   cli.ts        # CLI entry
   index.ts      # library entry
 tests/
-  unit/         # pure function tests
-  integration/  # end-to-end against fixtures
+  unit/         # focused behavior tests
+  eval/         # fixture recall vs expected.json
   fixtures/     # labeled TS projects + expected.json
 benchmarks/     # perf + recall on real OSS repos
 ```

@@ -1,0 +1,11 @@
+{
+  "expected": [
+    {
+      "file": "src/index.ts",
+      "line": 4,
+      "column": 12,
+      "name": "e",
+      "sourceKind": "catch-binding"
+    }
+  ]
+}

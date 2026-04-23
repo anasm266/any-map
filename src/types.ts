@@ -1,8 +1,14 @@
-/** Classifier output for milestone m1 (explicit `any` annotations only). */
+/** Classifier output — milestone m2+ (all `any` source kinds). */
 
-export type SourceKindExplicitM1 = "explicit-any";
+export type SourceKind =
+  | "explicit-any"
+  | "as-any"
+  | "untyped-import"
+  | "untyped-return"
+  | "catch-binding"
+  | "implicit-param";
 
-export interface ExplicitAnySource {
+export interface AnySource {
   /** Project-relative POSIX-style path (forward slashes). */
   filePath: string;
   /** 1-based line for the reported name location. */
@@ -11,10 +17,10 @@ export interface ExplicitAnySource {
   column: number;
   /** Best-effort symbol/declaration name for humans. */
   name: string;
-  sourceKind: SourceKindExplicitM1;
+  sourceKind: SourceKind;
 }
 
-export interface ScanSummaryM1 {
-  explicitAnySources: ExplicitAnySource[];
+export interface ScanSummary {
+  sources: AnySource[];
   fileCount: number;
 }
