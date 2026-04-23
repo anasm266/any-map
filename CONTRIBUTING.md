@@ -4,6 +4,10 @@ Thanks for considering a contribution. This project is pre-1.0 and under active 
 
 ## Development setup
 
+Graph / scan:
+
+- `pnpm exec any-map scan [path] --dump-graph` — JSON snapshot of nodes, edges, and `isSource` / `sourceKind` (when matched to classifier output).
+
 Requirements:
 
 - Node.js 20+ (22 recommended; see `.nvmrc`)

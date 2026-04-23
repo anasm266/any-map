@@ -11,11 +11,14 @@ program
 
 program
   .command("scan")
-  .description("Classify TypeScript `any` sources (milestone m2: six kinds).")
+  .description("Classify `any` sources (m2) and optionally dump the intra-module graph (m3).")
   .argument("[path]", "Project file, directory, or tsconfig root", ".")
-  .option("--json", "Emit machine-readable JSON", false)
-  .action(async (path: string | undefined, opts: { json?: boolean }) => {
-    const flags = opts.json === true ? { json: true as const } : {};
+  .option("--json", "Emit scan summary as JSON", false)
+  .option("--dump-graph", "Emit intra-module type-flow graph (nodes + edges) as JSON", false)
+  .action(async (path: string | undefined, opts: { json?: boolean; dumpGraph?: boolean }) => {
+    const flags: { json?: boolean; dumpGraph?: boolean } = {};
+    if (opts.json === true) flags.json = true;
+    if (opts.dumpGraph === true) flags.dumpGraph = true;
     await runScanCommand(path, flags);
   });
 
