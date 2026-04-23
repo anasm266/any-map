@@ -18,11 +18,11 @@ A single `any` in one utility file can silently propagate through assignments, d
 
 ## What it does (v1)
 
-| Command                             | Purpose                                                                |
-| ----------------------------------- | ---------------------------------------------------------------------- |
+| Command                             | Purpose                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------------------------ |
 | `any-map scan [path]`               | Analyze a TS project; rank `any` sources by intra-module blast radius (`--top`, `--json`). |
-| `any-map trace <file>:<line>:<col>` | Trace a specific infected symbol back to contributing sources.         |
-| `any-map graph [--output out.dot]`  | Emit the full infection graph as Graphviz DOT.                         |
+| `any-map trace <file>:<line>:<col>` | Trace a specific infected symbol back to contributing sources.                             |
+| `any-map graph [--output out.dot]`  | Emit the full infection graph as Graphviz DOT.                                             |
 
 `any-map scan` flags today: `--json` (includes `sourcesRankedByBlast`), `--dump-graph` (nodes, edges, `infectedBy`), `--top <n>` (limit ranked rows).
 
