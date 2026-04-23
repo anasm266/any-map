@@ -27,9 +27,30 @@ export interface SourceRanked extends AnySource {
   graphNodeId: string;
 }
 
+/** One step of the greedy set-cover over infected graph nodes (m5). */
+export interface GreedyCoverPick {
+  pick: number;
+  graphNodeId: string;
+  filePath: string;
+  line: number;
+  column: number;
+  name: string;
+  sourceKind: SourceKind;
+  blastRadius: number;
+  blastRank: number;
+  newlyCoveredNodes: number;
+  cumulativeCoveredNodes: number;
+  /** Rounded percent of all infected nodes covered after this pick (0–100). */
+  cumulativeCoveragePct: number;
+}
+
 export interface ScanSummary {
   sources: AnySource[];
   fileCount: number;
+  /** Graph nodes with at least one `any` infection tag after propagation. */
+  infectedNodeCount: number;
+  /** Greedy set-cover order: each pick maximizes newly covered infected nodes. */
+  greedyCoverPicks: GreedyCoverPick[];
   /** `any` sources with blast radius, sorted descending (intra-module graph reachability). */
   sourcesRankedByBlast: SourceRanked[];
 }

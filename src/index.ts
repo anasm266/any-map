@@ -1,4 +1,4 @@
-export type { AnySource, ScanSummary, SourceKind, SourceRanked } from "./types.js";
+export type { AnySource, GreedyCoverPick, ScanSummary, SourceKind, SourceRanked } from "./types.js";
 export { classifyScan } from "./analyzer/run-scan.js";
 export type { ScanOptions, ScanResult } from "./analyzer/run-scan.js";
 export {
@@ -17,3 +17,11 @@ export type {
 } from "./analyzer/graph-types.js";
 export { GraphBuilder, buildSerializedGraph } from "./analyzer/build-graph.js";
 export { makeNodeId } from "./analyzer/node-id.js";
+export { parseTraceLocation, traceSymbol } from "./analyzer/trace.js";
+export type { TraceOptions } from "./analyzer/trace.js";
+export type {
+  TraceHop,
+  TracePathSegment,
+  TracePathToSource,
+  TraceReport,
+} from "./analyzer/trace-types.js";

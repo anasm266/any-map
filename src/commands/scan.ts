@@ -25,7 +25,9 @@ export async function runScanCommand(
 
   console.log(
     pc.bold(
-      `Found ${n} any source${n === 1 ? "" : "s"} in ${files} project file${files === 1 ? "" : "s"}.`,
+      `Found ${n} any source${n === 1 ? "" : "s"}, ${summary.infectedNodeCount} infected graph node${
+        summary.infectedNodeCount === 1 ? "" : "s"
+      } in ${files} project file${files === 1 ? "" : "s"}.`,
     ),
   );
 
@@ -33,7 +35,41 @@ export async function runScanCommand(
     return;
   }
 
+  if (summary.greedyCoverPicks.length > 0) {
+    console.log("");
+    console.log(pc.bold("Fix order (greedy set-cover)"));
+    const greedyTable = new Table({
+      head: [
+        pc.dim("Pick"),
+        pc.dim("Cum.%"),
+        pc.dim("+Nodes"),
+        pc.dim("Blast"),
+        pc.dim("Bl#"),
+        pc.dim("File"),
+        pc.dim("Line:Col"),
+        pc.dim("Kind"),
+        pc.dim("Name"),
+      ],
+      wordWrap: true,
+    });
+    for (const p of summary.greedyCoverPicks) {
+      greedyTable.push([
+        String(p.pick),
+        String(p.cumulativeCoveragePct),
+        String(p.newlyCoveredNodes),
+        String(p.blastRadius),
+        String(p.blastRank),
+        p.filePath,
+        `${p.line}:${p.column}`,
+        p.sourceKind,
+        p.name,
+      ]);
+    }
+    console.log(greedyTable.toString());
+  }
+
   console.log("");
+  console.log(pc.bold("By blast radius"));
   const table = new Table({
     head: [
       pc.dim("Rank"),

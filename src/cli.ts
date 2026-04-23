@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { runScanCommand } from "./commands/scan.js";
+import { runTraceCommand } from "./commands/trace.js";
 
 const program = new Command();
 
@@ -38,6 +39,18 @@ program
       await runScanCommand(path, flags);
     },
   );
+
+program
+  .command("trace")
+  .description("Show type-flow paths from each contributing `any` source to a symbol (m5).")
+  .argument("<loc>", "file:line:column or file:line (project-relative path recommended)")
+  .argument("[path]", "Project file, directory, or tsconfig root", ".")
+  .option("--json", "Emit trace report as JSON", false)
+  .action(async (loc: string, scanPath: string | undefined, opts: { json?: boolean }) => {
+    const flags: { json?: boolean } = {};
+    if (opts.json === true) flags.json = true;
+    await runTraceCommand(loc, scanPath, flags);
+  });
 
 void program.parseAsync(process.argv).catch((err: unknown) => {
   console.error(err);

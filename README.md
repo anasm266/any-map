@@ -18,13 +18,15 @@ A single `any` in one utility file can silently propagate through assignments, d
 
 ## What it does (v1)
 
-| Command                             | Purpose                                                                                    |
-| ----------------------------------- | ------------------------------------------------------------------------------------------ |
-| `any-map scan [path]`               | Analyze a TS project; rank `any` sources by intra-module blast radius (`--top`, `--json`). |
-| `any-map trace <file>:<line>:<col>` | Trace a specific infected symbol back to contributing sources.                             |
-| `any-map graph [--output out.dot]`  | Emit the full infection graph as Graphviz DOT.                                             |
+| Command                            | Purpose                                                                                    |
+| ---------------------------------- | ------------------------------------------------------------------------------------------ |
+| `any-map scan [path]`              | Analyze a TS project; rank `any` sources by intra-module blast radius (`--top`, `--json`). |
+| `any-map trace <loc> [path]`       | Print type-flow paths from each `any` source to the symbol at `loc` (`file:line:col`).     |
+| `any-map graph [--output out.dot]` | Emit the full infection graph as Graphviz DOT.                                             |
 
-`any-map scan` flags today: `--json` (includes `sourcesRankedByBlast`), `--dump-graph` (nodes, edges, `infectedBy`), `--top <n>` (limit ranked rows).
+`any-map scan` flags today: `--json` (includes `sourcesRankedByBlast`, `greedyCoverPicks`, `infectedNodeCount`), `--dump-graph` (nodes, edges, `infectedBy`), `--top <n>` (limit blast-ranked rows). Human output lists **greedy set-cover** fix order (cumulative % of infected nodes) then blast-ranked sources.
+
+`any-map trace src/foo.ts:12:5` prints forward hops (`reason` per edge) from each source to the traced binding; use `--json` for machine-readable `TraceReport`.
 
 ### Output preview (target for v1)
 
@@ -72,8 +74,8 @@ Full algorithm details in [PLAN.md §5](./PLAN.md#5-algorithms).
 - [x] **m2:** all six `any` source kinds; `any-map scan` uses `cli-table3` (or `--json`).
 - [x] **m3:** intra-module type-flow graph; `any-map scan --dump-graph` (library: `buildSerializedGraph` / `GraphBuilder`).
 - [x] **m4:** forward propagation + blast-radius ranking; `scan --top N`; JSON field `sourcesRankedByBlast` (rank, blast, graph node id).
-- [ ] v0.1 (remaining): greedy set-cover + cumulative coverage in scan output
-- [ ] v0.3: greedy set-cover ranking + `trace` command
+- [x] **m5:** greedy set-cover table + JSON; `any-map trace`; `scripts/overlap-analysis.mjs` after build.
+- [ ] v0.1 (remaining): benchmarks table, `--fail-above`, polish
 - [ ] v0.4: `--format dot`, `--fail-above`, GitHub Action
 - [ ] v1.0: benchmark table against 4 real repos, blog post, launch
 

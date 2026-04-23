@@ -73,11 +73,21 @@ export function classifyScan(options: ScanOptions = { targetPath: "." }): ScanRe
   builder.applySources(sources);
   builder.propagate();
 
-  let ranked = mergeRankedWithOrphans(builder.rankSourcesByBlast(), sources);
+  const blastRanked = builder.rankSourcesByBlast();
+  const infectedNodeCount = builder.getInfectedNodeCount();
+  const greedyCoverPicks = builder.greedySetCoverPicks(blastRanked);
+
+  let ranked = mergeRankedWithOrphans(blastRanked, sources);
 
   if (options.top !== undefined && options.top > 0) {
     ranked = ranked.slice(0, options.top).map((r, i) => ({ ...r, rank: i + 1 }));
   }
 
-  return { sources, fileCount, sourcesRankedByBlast: ranked };
+  return {
+    sources,
+    fileCount,
+    infectedNodeCount,
+    greedyCoverPicks,
+    sourcesRankedByBlast: ranked,
+  };
 }

@@ -57,6 +57,15 @@ describe("scan smoke (mixed kinds)", () => {
     expect(top2.sourcesRankedByBlast[0]?.rank).toBe(1);
     expect(top2.sourcesRankedByBlast[1]?.rank).toBe(2);
   });
+
+  it("reports infected node count and greedy cover picks (m5)", () => {
+    const summary = classifyScan({ targetPath: smokeRoot });
+    expect(summary.infectedNodeCount).toBeGreaterThan(0);
+    expect(summary.greedyCoverPicks.length).toBeGreaterThan(0);
+    expect(
+      summary.greedyCoverPicks[summary.greedyCoverPicks.length - 1]!.cumulativeCoveragePct,
+    ).toBe(100);
+  });
 });
 
 function isSortedLikeClassifier(sources: AnySource[]): boolean {
