@@ -1,6 +1,6 @@
 # any-map — Detailed Build Plan
 
-> **Status:** living document. Update after each milestone.
+> **Status:** living document. **m4** (propagation + blast + `--top`) landed; see git tag / changelog.
 > **Owner:** @anasm266
 > **Target v1.0 release:** ~7 weeks from kickoff.
 

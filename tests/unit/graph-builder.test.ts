@@ -122,3 +122,24 @@ describe("intra-module graph (m3)", () => {
     expect(g.edges.some((e) => e.reason === "call-return" && e.to === midId)).toBe(true);
   });
 });
+
+describe("propagation + blast (m4)", () => {
+  it("tags downstream assignment from an any source", () => {
+    const g = graphFor({
+      "src/index.ts": `export const src: any = 1;\nexport const downstream = src;\n`,
+    });
+    const srcNode = g.nodes.find((n) => n.name === "src" && n.isSource);
+    const downNode = g.nodes.find((n) => n.name === "downstream");
+    expect(srcNode).toBeDefined();
+    expect(downNode).toBeDefined();
+    expect(downNode?.infectedBy).toContain(srcNode?.id);
+  });
+
+  it("source node includes itself in infectedBy", () => {
+    const g = graphFor({
+      "src/index.ts": `export const only: any = 1;\n`,
+    });
+    const n = g.nodes.find((x) => x.name === "only" && x.isSource);
+    expect(n?.infectedBy).toContain(n?.id);
+  });
+});

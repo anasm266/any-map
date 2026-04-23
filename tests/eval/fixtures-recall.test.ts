@@ -43,6 +43,7 @@ describe("fixture recall (m2)", () => {
       const actual = summary.sources;
 
       expect(actual.length).toBe(expected.length);
+      expect(summary.sourcesRankedByBlast).toHaveLength(actual.length);
 
       const actualKeys = new Set(actual.map(key));
       for (const e of expected) {

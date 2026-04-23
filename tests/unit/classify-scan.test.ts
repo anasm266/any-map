@@ -28,6 +28,35 @@ describe("scan smoke (mixed kinds)", () => {
     const summary = classifyScan({ targetPath: smokeRoot });
     expect(isSortedLikeClassifier(summary.sources)).toBe(true);
   });
+
+  it("includes every classifier row in sourcesRankedByBlast (blast sort + orphans)", () => {
+    const summary = classifyScan({ targetPath: smokeRoot });
+    expect(summary.sourcesRankedByBlast).toHaveLength(summary.sources.length);
+    const keys = new Set(
+      summary.sources.map((s) => `${s.filePath}:${s.line}:${s.column}:${s.name}:${s.sourceKind}`),
+    );
+    for (const r of summary.sourcesRankedByBlast) {
+      const k = `${r.filePath}:${r.line}:${r.column}:${r.name}:${r.sourceKind}`;
+      expect(keys.has(k)).toBe(true);
+    }
+  });
+
+  it("ranks by blast descending among graph-backed sources", () => {
+    const summary = classifyScan({ targetPath: smokeRoot });
+    const withBlast = summary.sourcesRankedByBlast.filter((r) => r.blastRadius > 0);
+    for (let i = 1; i < withBlast.length; i++) {
+      expect(withBlast[i - 1]!.blastRadius).toBeGreaterThanOrEqual(withBlast[i]!.blastRadius);
+    }
+  });
+
+  it("honors --top for sourcesRankedByBlast length", () => {
+    const full = classifyScan({ targetPath: smokeRoot });
+    const top2 = classifyScan({ targetPath: smokeRoot, top: 2 });
+    expect(full.sourcesRankedByBlast.length).toBeGreaterThan(2);
+    expect(top2.sourcesRankedByBlast).toHaveLength(2);
+    expect(top2.sourcesRankedByBlast[0]?.rank).toBe(1);
+    expect(top2.sourcesRankedByBlast[1]?.rank).toBe(2);
+  });
 });
 
 function isSortedLikeClassifier(sources: AnySource[]): boolean {

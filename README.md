@@ -20,9 +20,11 @@ A single `any` in one utility file can silently propagate through assignments, d
 
 | Command                             | Purpose                                                                |
 | ----------------------------------- | ---------------------------------------------------------------------- |
-| `any-map scan [path]`               | Analyze a TS project; rank sources by blast radius + greedy set-cover. |
+| `any-map scan [path]`               | Analyze a TS project; rank `any` sources by intra-module blast radius (`--top`, `--json`). |
 | `any-map trace <file>:<line>:<col>` | Trace a specific infected symbol back to contributing sources.         |
 | `any-map graph [--output out.dot]`  | Emit the full infection graph as Graphviz DOT.                         |
+
+`any-map scan` flags today: `--json` (includes `sourcesRankedByBlast`), `--dump-graph` (nodes, edges, `infectedBy`), `--top <n>` (limit ranked rows).
 
 ### Output preview (target for v1)
 
@@ -68,9 +70,9 @@ Full algorithm details in [PLAN.md §5](./PLAN.md#5-algorithms).
 ## Roadmap
 
 - [x] **m2:** all six `any` source kinds; `any-map scan` uses `cli-table3` (or `--json`).
-- [x] **m3 (current):** intra-module type-flow graph; `any-map scan --dump-graph` (library: `buildSerializedGraph` / `GraphBuilder`).
-- [ ] v0.1: blast radius (intra-module)
-- [ ] v0.2: full graph construction + forward propagation
+- [x] **m3:** intra-module type-flow graph; `any-map scan --dump-graph` (library: `buildSerializedGraph` / `GraphBuilder`).
+- [x] **m4:** forward propagation + blast-radius ranking; `scan --top N`; JSON field `sourcesRankedByBlast` (rank, blast, graph node id).
+- [ ] v0.1 (remaining): greedy set-cover + cumulative coverage in scan output
 - [ ] v0.3: greedy set-cover ranking + `trace` command
 - [ ] v0.4: `--format dot`, `--fail-above`, GitHub Action
 - [ ] v1.0: benchmark table against 4 real repos, blog post, launch

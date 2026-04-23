@@ -5,11 +5,12 @@ import { classifyScan, type ScanOptions } from "../analyzer/run-scan.js";
 
 export async function runScanCommand(
   targetPath: string | undefined,
-  options: { json?: boolean; dumpGraph?: boolean },
+  options: { json?: boolean; dumpGraph?: boolean; top?: number },
 ): Promise<void> {
   const scanOpts: ScanOptions = { targetPath: targetPath ?? "." };
   if (options.json === true) scanOpts.json = true;
   if (options.dumpGraph === true) scanOpts.dumpGraph = true;
+  if (options.top !== undefined) scanOpts.top = options.top;
 
   const result = classifyScan(scanOpts);
 
@@ -34,12 +35,26 @@ export async function runScanCommand(
 
   console.log("");
   const table = new Table({
-    head: [pc.dim("File"), pc.dim("Line:Col"), pc.dim("Kind"), pc.dim("Name")],
+    head: [
+      pc.dim("Rank"),
+      pc.dim("Blast"),
+      pc.dim("File"),
+      pc.dim("Line:Col"),
+      pc.dim("Kind"),
+      pc.dim("Name"),
+    ],
     wordWrap: true,
   });
 
-  for (const s of summary.sources) {
-    table.push([s.filePath, `${s.line}:${s.column}`, s.sourceKind, s.name]);
+  for (const s of summary.sourcesRankedByBlast) {
+    table.push([
+      String(s.rank),
+      String(s.blastRadius),
+      s.filePath,
+      `${s.line}:${s.column}`,
+      s.sourceKind,
+      s.name,
+    ]);
   }
 
   console.log(table.toString());

@@ -1,5 +1,5 @@
 import ts from "typescript";
-import type { AnySource } from "../types.js";
+import type { AnySource, SourceRanked } from "../types.js";
 import type {
   EdgeReason,
   GraphEdge,
@@ -33,6 +33,8 @@ export class GraphBuilder {
   private readonly checker: ts.TypeChecker;
   private readonly nodes = new Map<string, GraphNodeMutable>();
   private readonly edgeList: GraphEdge[] = [];
+  /** Type flows `from` → `to` (PLAN §5.2). */
+  private readonly outgoing = new Map<string, GraphEdge[]>();
 
   constructor(
     private readonly program: ts.Program,
@@ -51,7 +53,11 @@ export class GraphBuilder {
 
   private addEdge(from: string, to: string, reason: EdgeReason): void {
     if (from === to) return;
-    this.edgeList.push({ from, to, reason });
+    const edge: GraphEdge = { from, to, reason };
+    this.edgeList.push(edge);
+    const list = this.outgoing.get(from);
+    if (list) list.push(edge);
+    else this.outgoing.set(from, [edge]);
   }
 
   private typeStringAt(node: ts.Node): string {
@@ -412,6 +418,71 @@ export class GraphBuilder {
     }
   }
 
+  /**
+   * Forward propagation (PLAN §5.3): along edges `from` → `to`, each source id tags reachable nodes in `infectedBy`.
+   */
+  propagate(): void {
+    const sourceIds = [...this.nodes.values()].filter((n) => n.isSource).map((n) => n.id);
+    for (const s of sourceIds) {
+      const origin = this.nodes.get(s);
+      if (!origin) continue;
+      origin.infectedBy.add(s);
+      const q: string[] = [s];
+      while (q.length > 0) {
+        const u = q.shift()!;
+        for (const e of this.outgoing.get(u) ?? []) {
+          const target = this.nodes.get(e.to);
+          if (!target) continue;
+          if (target.infectedBy.has(s)) continue;
+          target.infectedBy.add(s);
+          q.push(e.to);
+        }
+      }
+    }
+  }
+
+  countInfectedBy(sourceId: string): number {
+    let c = 0;
+    for (const n of this.nodes.values()) {
+      if (n.infectedBy.has(sourceId)) c += 1;
+    }
+    return c;
+  }
+
+  /**
+   * Blast radius (PLAN §5.4a): |{ n : source ∈ n.infectedBy }| after propagation.
+   */
+  rankSourcesByBlast(): SourceRanked[] {
+    const rows = [...this.nodes.values()]
+      .filter((n) => n.isSource && n.sourceKind !== undefined)
+      .map((n) => ({
+        n,
+        blast: this.countInfectedBy(n.id),
+      }))
+      .sort(
+        (a, b) =>
+          b.blast - a.blast ||
+          a.n.filePath.localeCompare(b.n.filePath) ||
+          a.n.line - b.n.line ||
+          a.n.column - b.n.column ||
+          a.n.name.localeCompare(b.n.name),
+      );
+
+    return rows.map((row, i): SourceRanked => {
+      const { n } = row;
+      return {
+        rank: i + 1,
+        blastRadius: row.blast,
+        graphNodeId: n.id,
+        filePath: n.filePath,
+        line: n.line,
+        column: n.column,
+        name: n.name,
+        sourceKind: n.sourceKind!,
+      };
+    });
+  }
+
   serialize(): SerializedGraph {
     const edgeKeys = new Set<string>();
     const edges: GraphEdge[] = [];
@@ -462,5 +533,6 @@ export function buildSerializedGraph(
   const b = new GraphBuilder(program, projectRootAbs);
   b.build();
   b.applySources(sources);
+  b.propagate();
   return b.serialize();
 }

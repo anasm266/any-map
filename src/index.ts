@@ -1,4 +1,4 @@
-export type { AnySource, ScanSummary, SourceKind } from "./types.js";
+export type { AnySource, ScanSummary, SourceKind, SourceRanked } from "./types.js";
 export { classifyScan } from "./analyzer/run-scan.js";
 export type { ScanOptions, ScanResult } from "./analyzer/run-scan.js";
 export {
