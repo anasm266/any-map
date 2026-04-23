@@ -1,23 +1,24 @@
 import Table from "cli-table3";
 import pc from "picocolors";
+import type { ScanSummary } from "../types.js";
 import { classifyScan, type ScanOptions } from "../analyzer/run-scan.js";
 
 export async function runScanCommand(
   targetPath: string | undefined,
-  options: { json?: boolean },
+  options: { json?: boolean; dumpGraph?: boolean },
 ): Promise<void> {
-  const opts: ScanOptions = {
-    targetPath: targetPath ?? ".",
-    json: options.json === true,
-  };
+  const scanOpts: ScanOptions = { targetPath: targetPath ?? "." };
+  if (options.json === true) scanOpts.json = true;
+  if (options.dumpGraph === true) scanOpts.dumpGraph = true;
 
-  const summary = classifyScan(opts);
+  const result = classifyScan(scanOpts);
 
-  if (opts.json) {
-    console.log(JSON.stringify(summary, null, 2));
+  if (scanOpts.dumpGraph || scanOpts.json) {
+    console.log(JSON.stringify(result, null, 2));
     return;
   }
 
+  const summary = result as ScanSummary;
   const n = summary.sources.length;
   const files = summary.fileCount;
 

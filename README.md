@@ -67,7 +67,8 @@ Full algorithm details in [PLAN.md §5](./PLAN.md#5-algorithms).
 
 ## Roadmap
 
-- [x] **m2 (current):** all six `any` source kinds; `any-map scan` uses `cli-table3` (or `--json`); see `classifyScan` in the library API.
+- [x] **m2:** all six `any` source kinds; `any-map scan` uses `cli-table3` (or `--json`).
+- [x] **m3 (current):** intra-module type-flow graph; `any-map scan --dump-graph` (library: `buildSerializedGraph` / `GraphBuilder`).
 - [ ] v0.1: blast radius (intra-module)
 - [ ] v0.2: full graph construction + forward propagation
 - [ ] v0.3: greedy set-cover ranking + `trace` command
