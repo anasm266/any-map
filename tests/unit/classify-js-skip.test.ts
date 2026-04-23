@@ -36,13 +36,17 @@ void leak;
         const sources = findAnySources(program, root);
 
         const bad = sources.filter(
-          (s) => s.filePath.endsWith("consumer.js") && INFERENCE_KINDS.has(s.sourceKind),
+          (s) =>
+            s.filePath.endsWith("consumer.js") &&
+            INFERENCE_KINDS.has(s.sourceKind),
         );
         expect(bad).toEqual([]);
 
-        expect(sources.some((s) => s.sourceKind === "explicit-any" && s.name === "leak")).toBe(
-          true,
-        );
+        expect(
+          sources.some(
+            (s) => s.sourceKind === "explicit-any" && s.name === "leak",
+          ),
+        ).toBe(true);
       },
     );
   });

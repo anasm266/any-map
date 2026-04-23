@@ -5,7 +5,10 @@ import path from "node:path";
 /**
  * Minimal disk-backed TS project for graph / program tests (Linux + Windows).
  */
-export function withTempProject(files: Record<string, string>, run: (root: string) => void): void {
+export function withTempProject(
+  files: Record<string, string>,
+  run: (root: string) => void,
+): void {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "any-map-graph-"));
   try {
     fs.writeFileSync(

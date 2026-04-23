@@ -1,5 +1,10 @@
 import ts from "typescript";
-import type { AnySource, GreedyCoverPick, SourceKind, SourceRanked } from "../types.js";
+import type {
+  AnySource,
+  GreedyCoverPick,
+  SourceKind,
+  SourceRanked,
+} from "../types.js";
 import type {
   EdgeReason,
   GraphEdge,
@@ -8,10 +13,15 @@ import type {
   SerializedGraph,
 } from "./graph-types.js";
 import type { TraceHop } from "./trace-types.js";
-import { isFromNodeModulesOrDts, toProjectRelativePath } from "./load-project.js";
+import {
+  isFromNodeModulesOrDts,
+  toProjectRelativePath,
+} from "./load-project.js";
 import { makeNodeId } from "./node-id.js";
 
-function getEnclosingFunctionLike(node: ts.Node): ts.FunctionLikeDeclaration | undefined {
+function getEnclosingFunctionLike(
+  node: ts.Node,
+): ts.FunctionLikeDeclaration | undefined {
   let p: ts.Node | undefined = node.parent;
   while (p) {
     if (
@@ -63,7 +73,11 @@ export class GraphBuilder {
 
   private typeStringAt(node: ts.Node): string {
     const t = this.checker.getTypeAtLocation(node);
-    return this.checker.typeToString(t, undefined, ts.TypeFormatFlags.NoTruncation);
+    return this.checker.typeToString(
+      t,
+      undefined,
+      ts.TypeFormatFlags.NoTruncation,
+    );
   }
 
   private ensureNamedDecl(
@@ -170,14 +184,21 @@ export class GraphBuilder {
 
   private returnAnchor(
     fn: ts.FunctionLikeDeclaration,
-  ): { filePath: string; line: number; column: number; displayName: string } | undefined {
+  ):
+    | { filePath: string; line: number; column: number; displayName: string }
+    | undefined {
     const sf = fn.getSourceFile();
     const filePath = this.rel(sf);
     const vp = fn.parent;
     if (ts.isVariableDeclaration(vp) && ts.isIdentifier(vp.name)) {
       const pos = vp.name.getStart(sf, false);
       const { line, character } = sf.getLineAndCharacterOfPosition(pos);
-      return { filePath, line: line + 1, column: character + 1, displayName: vp.name.text };
+      return {
+        filePath,
+        line: line + 1,
+        column: character + 1,
+        displayName: vp.name.text,
+      };
     }
     if (
       ts.isPropertyDeclaration(vp) &&
@@ -186,17 +207,32 @@ export class GraphBuilder {
     ) {
       const pos = vp.name.getStart(sf, false);
       const { line, character } = sf.getLineAndCharacterOfPosition(pos);
-      return { filePath, line: line + 1, column: character + 1, displayName: vp.name.text };
+      return {
+        filePath,
+        line: line + 1,
+        column: character + 1,
+        displayName: vp.name.text,
+      };
     }
     if (ts.isFunctionDeclaration(fn) && fn.name) {
       const pos = fn.name.getStart(sf, false);
       const { line, character } = sf.getLineAndCharacterOfPosition(pos);
-      return { filePath, line: line + 1, column: character + 1, displayName: fn.name.text };
+      return {
+        filePath,
+        line: line + 1,
+        column: character + 1,
+        displayName: fn.name.text,
+      };
     }
     if (ts.isMethodDeclaration(fn) && ts.isIdentifier(fn.name)) {
       const pos = fn.name.getStart(sf, false);
       const { line, character } = sf.getLineAndCharacterOfPosition(pos);
-      return { filePath, line: line + 1, column: character + 1, displayName: fn.name.text };
+      return {
+        filePath,
+        line: line + 1,
+        column: character + 1,
+        displayName: fn.name.text,
+      };
     }
     return undefined;
   }
@@ -211,7 +247,11 @@ export class GraphBuilder {
       const rt = sig
         ? this.checker.getReturnTypeOfSignature(sig)
         : this.checker.getTypeAtLocation(fn);
-      const typeString = this.checker.typeToString(rt, undefined, ts.TypeFormatFlags.NoTruncation);
+      const typeString = this.checker.typeToString(
+        rt,
+        undefined,
+        ts.TypeFormatFlags.NoTruncation,
+      );
       this.nodes.set(id, {
         id,
         filePath,
@@ -246,7 +286,10 @@ export class GraphBuilder {
     if (node.importClause.name && !node.importClause.isTypeOnly) {
       locals.push(node.importClause.name);
     }
-    if (node.importClause.namedBindings && ts.isNamedImports(node.importClause.namedBindings)) {
+    if (
+      node.importClause.namedBindings &&
+      ts.isNamedImports(node.importClause.namedBindings)
+    ) {
       for (const el of node.importClause.namedBindings.elements) {
         if (!el.isTypeOnly) locals.push(el.name);
       }
@@ -321,7 +364,9 @@ export class GraphBuilder {
       e.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
       ts.isCallExpression(e.right)
     ) {
-      const lhsId = ts.isIdentifier(e.left) ? this.exprToNodeId(e.left) : undefined;
+      const lhsId = ts.isIdentifier(e.left)
+        ? this.exprToNodeId(e.left)
+        : undefined;
       this.edgesFromCall(e.right, lhsId);
     }
   }
@@ -393,10 +438,13 @@ export class GraphBuilder {
     }
 
     if (ts.isImportDeclaration(node)) this.visitImportDeclaration(node);
-    else if (ts.isExpressionStatement(node)) this.visitExpressionStatement(node);
-    else if (ts.isVariableDeclaration(node)) this.visitVariableDeclaration(node);
+    else if (ts.isExpressionStatement(node))
+      this.visitExpressionStatement(node);
+    else if (ts.isVariableDeclaration(node))
+      this.visitVariableDeclaration(node);
     else if (ts.isReturnStatement(node)) this.visitReturnStatement(node);
-    else if (ts.isPropertyDeclaration(node)) this.visitPropertyDeclaration(node);
+    else if (ts.isPropertyDeclaration(node))
+      this.visitPropertyDeclaration(node);
     else if (
       ts.isFunctionDeclaration(node) ||
       ts.isArrowFunction(node) ||
@@ -441,7 +489,9 @@ export class GraphBuilder {
    * Forward propagation (PLAN §5.3): along edges `from` → `to`, each source id tags reachable nodes in `infectedBy`.
    */
   propagate(): void {
-    const sourceIds = [...this.nodes.values()].filter((n) => n.isSource).map((n) => n.id);
+    const sourceIds = [...this.nodes.values()]
+      .filter((n) => n.isSource)
+      .map((n) => n.id);
     for (const s of sourceIds) {
       const origin = this.nodes.get(s);
       if (!origin) continue;
@@ -603,10 +653,14 @@ export class GraphBuilder {
       .sort((a, b) => a.localeCompare(b));
   }
 
-  getAnySourceRow(
-    nodeId: string,
-  ):
-    | { filePath: string; line: number; column: number; name: string; sourceKind: SourceKind }
+  getAnySourceRow(nodeId: string):
+    | {
+        filePath: string;
+        line: number;
+        column: number;
+        name: string;
+        sourceKind: SourceKind;
+      }
     | undefined {
     const n = this.nodes.get(nodeId);
     if (!n?.isSource || !n.sourceKind) return undefined;
@@ -619,7 +673,11 @@ export class GraphBuilder {
     };
   }
 
-  findNodeIdAtLocation(filePath: string, line: number, column: number): string | undefined {
+  findNodeIdAtLocation(
+    filePath: string,
+    line: number,
+    column: number,
+  ): string | undefined {
     const norm = filePath.replace(/\\/g, "/");
     const matches = [...this.nodes.values()].filter(
       (n) => n.filePath === norm && n.line === line && n.column === column,
@@ -689,7 +747,9 @@ export class GraphBuilder {
           isSource: n.isSource,
           infectedBy,
         };
-        return n.sourceKind !== undefined ? { ...base, sourceKind: n.sourceKind } : base;
+        return n.sourceKind !== undefined
+          ? { ...base, sourceKind: n.sourceKind }
+          : base;
       })
       .sort(
         (a, b) =>

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { filterSources, parseSourceKindsList } from "../../src/analyzer/filter-sources.js";
+import {
+  filterSources,
+  parseSourceKindsList,
+} from "../../src/analyzer/filter-sources.js";
 import type { AnySource } from "../../src/types.js";
 
 describe("filterSources", () => {
@@ -35,7 +38,10 @@ describe("filterSources", () => {
 
 describe("parseSourceKindsList", () => {
   it("parses CSV kinds", () => {
-    expect(parseSourceKindsList(" explicit-any , as-any ")).toEqual(["explicit-any", "as-any"]);
+    expect(parseSourceKindsList(" explicit-any , as-any ")).toEqual([
+      "explicit-any",
+      "as-any",
+    ]);
   });
 
   it("rejects unknown kind", () => {

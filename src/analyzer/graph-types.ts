@@ -1,6 +1,11 @@
 import type { SourceKind } from "../types.js";
 
-export type GraphNodeKind = "variable" | "parameter" | "return" | "property" | "import-binding";
+export type GraphNodeKind =
+  | "variable"
+  | "parameter"
+  | "return"
+  | "property"
+  | "import-binding";
 
 export type EdgeReason =
   | "assignment"

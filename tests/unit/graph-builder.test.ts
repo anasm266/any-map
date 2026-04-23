@@ -15,7 +15,9 @@ function hasEdge(
   const from = idOf(fromName);
   const to = idOf(toName);
   if (!from || !to) return false;
-  return g.edges.some((e) => e.from === from && e.to === to && e.reason === reason);
+  return g.edges.some(
+    (e) => e.from === from && e.to === to && e.reason === reason,
+  );
 }
 
 function graphFor(files: Record<string, string>): SerializedGraph {
@@ -42,7 +44,9 @@ describe("intra-module graph (m3)", () => {
     });
     const yId = g.nodes.find((n) => n.name === "y")?.id;
     expect(yId).toBeDefined();
-    expect(g.edges.some((e) => e.reason === "call-return" && e.to === yId)).toBe(true);
+    expect(
+      g.edges.some((e) => e.reason === "call-return" && e.to === yId),
+    ).toBe(true);
   });
 
   it("call-return: y = id(1) assignment statement → return slot → y", () => {
@@ -51,7 +55,9 @@ describe("intra-module graph (m3)", () => {
     });
     const yId = g.nodes.find((n) => n.name === "y")?.id;
     expect(yId).toBeDefined();
-    expect(g.edges.some((e) => e.reason === "call-return" && e.to === yId)).toBe(true);
+    expect(
+      g.edges.some((e) => e.reason === "call-return" && e.to === yId),
+    ).toBe(true);
   });
 
   it("parameter-binding: f(actual) → param formal", () => {
@@ -70,7 +76,12 @@ describe("intra-module graph (m3)", () => {
     expect(retNode).toBeDefined();
     expect(innerId).toBeDefined();
     expect(
-      g.edges.some((e) => e.from === innerId && e.to === retNode?.id && e.reason === "assignment"),
+      g.edges.some(
+        (e) =>
+          e.from === innerId &&
+          e.to === retNode?.id &&
+          e.reason === "assignment",
+      ),
     ).toBe(true);
   });
 
@@ -111,7 +122,9 @@ describe("intra-module graph (m3)", () => {
     const vId = g.nodes.find((n) => n.name === "v")?.id;
     expect(ret).toBeDefined();
     expect(
-      g.edges.some((e) => e.from === vId && e.to === ret?.id && e.reason === "assignment"),
+      g.edges.some(
+        (e) => e.from === vId && e.to === ret?.id && e.reason === "assignment",
+      ),
     ).toBe(true);
   });
 
@@ -128,7 +141,9 @@ describe("intra-module graph (m3)", () => {
     });
     expect(hasEdge(g, "parameter-binding", "base", "x")).toBe(true);
     const midId = g.nodes.find((n) => n.name === "mid")?.id;
-    expect(g.edges.some((e) => e.reason === "call-return" && e.to === midId)).toBe(true);
+    expect(
+      g.edges.some((e) => e.reason === "call-return" && e.to === midId),
+    ).toBe(true);
   });
 });
 
@@ -156,7 +171,9 @@ describe("propagation + blast (m4)", () => {
     const g = graphFor({
       "src/index.ts": `function f() {\n  return JSON.parse("");\n}\nconst y = f();\n`,
     });
-    const ret = g.nodes.find((n) => n.kind === "return" && n.name === "f" && n.isSource);
+    const ret = g.nodes.find(
+      (n) => n.kind === "return" && n.name === "f" && n.isSource,
+    );
     const y = g.nodes.find((n) => n.name === "y");
     expect(ret).toBeDefined();
     expect(y).toBeDefined();
@@ -168,7 +185,9 @@ describe("propagation + blast (m4)", () => {
     const g = graphFor({
       "src/index.ts": `function f() {\n  return JSON.parse("");\n}\nlet y;\ny = f();\n`,
     });
-    const ret = g.nodes.find((n) => n.kind === "return" && n.name === "f" && n.isSource);
+    const ret = g.nodes.find(
+      (n) => n.kind === "return" && n.name === "f" && n.isSource,
+    );
     const y = g.nodes.find((n) => n.name === "y");
     expect(ret).toBeDefined();
     expect(y?.infectedBy).toContain(ret?.id);

@@ -1,11 +1,21 @@
-export type { AnySource, GreedyCoverPick, ScanSummary, SourceKind, SourceRanked } from "./types.js";
+export type {
+  AnySource,
+  GreedyCoverPick,
+  ScanSummary,
+  SourceKind,
+  SourceRanked,
+} from "./types.js";
 export {
   applyTopToScanSummary,
   buildScanOptions,
   classifyScan,
   runFullScan,
 } from "./analyzer/run-scan.js";
-export type { FullScanResult, ScanOptions, ScanResult } from "./analyzer/run-scan.js";
+export type {
+  FullScanResult,
+  ScanOptions,
+  ScanResult,
+} from "./analyzer/run-scan.js";
 export {
   filterSources,
   parseIgnoreGlobsList,

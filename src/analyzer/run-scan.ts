@@ -1,4 +1,9 @@
-import type { AnySource, ScanSummary, SourceKind, SourceRanked } from "../types.js";
+import type {
+  AnySource,
+  ScanSummary,
+  SourceKind,
+  SourceRanked,
+} from "../types.js";
 import { GraphBuilder } from "./build-graph.js";
 import type { SourceFilters } from "./filter-sources.js";
 import { filterSources } from "./filter-sources.js";
@@ -42,14 +47,19 @@ export interface FullScanResult {
   serializedGraph: SerializedGraph;
 }
 
-function sourceKey(s: Pick<AnySource, "filePath" | "line" | "column" | "name">): string {
+function sourceKey(
+  s: Pick<AnySource, "filePath" | "line" | "column" | "name">,
+): string {
   return `${s.filePath}:${s.line}:${s.column}:${s.name}`;
 }
 
 /**
  * Classifier rows that never matched a graph node (e.g. reporting position mismatch) still appear with blast 0.
  */
-function mergeRankedWithOrphans(ranked: SourceRanked[], allSources: AnySource[]): SourceRanked[] {
+function mergeRankedWithOrphans(
+  ranked: SourceRanked[],
+  allSources: AnySource[],
+): SourceRanked[] {
   const keys = new Set(ranked.map(sourceKey));
   const out: SourceRanked[] = ranked.map((r, i) => ({ ...r, rank: i + 1 }));
   let nextRank = out.length + 1;
@@ -81,7 +91,10 @@ function mergeRankedWithOrphans(ranked: SourceRanked[], allSources: AnySource[])
  * Limit table / JSON list views. Does not change totals (`sources`, `infectedNodeCount`).
  * CI `--fail-coverage` must run on the **untruncated** summary from `runFullScan`.
  */
-export function applyTopToScanSummary(summary: ScanSummary, top?: number): ScanSummary {
+export function applyTopToScanSummary(
+  summary: ScanSummary,
+  top?: number,
+): ScanSummary {
   if (top === undefined || top <= 0) return summary;
   const ranked = summary.sourcesRankedByBlast
     .slice(0, top)
@@ -128,9 +141,13 @@ export function runFullScan(options: ScanOptions): FullScanResult {
 /**
  * Classify `any` sources (m2), intra-module graph + propagation + blast ranking (m4), optional graph JSON (m3).
  */
-export function classifyScan(options: ScanOptions & { dumpGraph: true }): SerializedGraph;
+export function classifyScan(
+  options: ScanOptions & { dumpGraph: true },
+): SerializedGraph;
 export function classifyScan(options?: ScanOptions): ScanSummary;
-export function classifyScan(options: ScanOptions = { targetPath: "." }): ScanResult {
+export function classifyScan(
+  options: ScanOptions = { targetPath: "." },
+): ScanResult {
   if (options.dumpGraph) {
     const { top, dumpGraph: _dumpGraph, ...rest } = options;
     void top;

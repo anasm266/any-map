@@ -12,7 +12,10 @@ function dotName(rawId: string): string {
 /**
  * Graphviz DOT for an intra-module type-flow snapshot (`--format dot`, `any-map graph`).
  */
-export function serializedGraphToDot(g: SerializedGraph, title = "any-map"): string {
+export function serializedGraphToDot(
+  g: SerializedGraph,
+  title = "any-map",
+): string {
   const lines: string[] = [
     `digraph "${escLabel(title)}" {`,
     `  rankdir=LR;`,
@@ -22,7 +25,9 @@ export function serializedGraphToDot(g: SerializedGraph, title = "any-map"): str
 
   for (const n of g.nodes) {
     const label = `${n.name}\\n${n.filePath}:${n.line}:${n.column}\\n${n.kind}`;
-    const shape = n.isSource ? `shape=box, style=filled, fillcolor="#ffcccc"` : `shape=ellipse`;
+    const shape = n.isSource
+      ? `shape=box, style=filled, fillcolor="#ffcccc"`
+      : `shape=ellipse`;
     const id = dotName(n.id);
     lines.push(`  ${id} [label="${escLabel(label)}", ${shape}];`);
   }
@@ -30,7 +35,9 @@ export function serializedGraphToDot(g: SerializedGraph, title = "any-map"): str
   const idOf = (raw: string) => dotName(raw);
 
   for (const e of g.edges) {
-    lines.push(`  ${idOf(e.from)} -> ${idOf(e.to)} [label="${escLabel(e.reason)}"];`);
+    lines.push(
+      `  ${idOf(e.from)} -> ${idOf(e.to)} [label="${escLabel(e.reason)}"];`,
+    );
   }
 
   lines.push(`}`);

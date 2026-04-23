@@ -12,7 +12,11 @@ export async function runGraphCommand(
   },
 ): Promise<void> {
   const { serializedGraph } = runFullScan(
-    buildScanOptions(targetPath ?? ".", options.sourceKinds, options.ignoreGlobs),
+    buildScanOptions(
+      targetPath ?? ".",
+      options.sourceKinds,
+      options.ignoreGlobs,
+    ),
   );
 
   const dot = serializedGraphToDot(serializedGraph);

@@ -30,5 +30,10 @@
     "ignoreDeprecations": "6.0"
   },
   "include": ["src/**/*", "tests/**/*"],
-  "exclude": ["node_modules", "dist", "tests/fixtures/**", "tests/fixtures/**/expected.json"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests/fixtures/**",
+    "tests/fixtures/**/expected.json"
+  ]
 }

@@ -1,6 +1,10 @@
 import Table from "cli-table3";
 import pc from "picocolors";
-import { applyTopToScanSummary, buildScanOptions, runFullScan } from "../analyzer/run-scan.js";
+import {
+  applyTopToScanSummary,
+  buildScanOptions,
+  runFullScan,
+} from "../analyzer/run-scan.js";
 import type { ScanSummary, SourceKind } from "../types.js";
 import { serializedGraphToDot } from "../format/to-dot.js";
 import { applyScanFailureResult, evaluateScanFailure } from "./scan-failure.js";
@@ -24,9 +28,14 @@ export async function runScanCommand(
   options: ScanCliOptions,
 ): Promise<void> {
   const basePath = targetPath ?? ".";
-  const format: ScanCliFormat = options.format ?? (options.json === true ? "json" : "table");
+  const format: ScanCliFormat =
+    options.format ?? (options.json === true ? "json" : "table");
 
-  const scanOpts = buildScanOptions(basePath, options.sourceKinds, options.ignoreGlobs);
+  const scanOpts = buildScanOptions(
+    basePath,
+    options.sourceKinds,
+    options.ignoreGlobs,
+  );
 
   if (options.dumpGraph === true) {
     const { summary, serializedGraph } = runFullScan(scanOpts);
@@ -58,7 +67,9 @@ function printScanTables(summary: ScanSummary): void {
   const n = summary.sources.length;
   const files = summary.fileCount;
 
-  console.log(pc.dim(`Scanning ${files} project file${files === 1 ? "" : "s"}...`));
+  console.log(
+    pc.dim(`Scanning ${files} project file${files === 1 ? "" : "s"}...`),
+  );
   console.log(
     pc.bold(
       `Found ${n} any source${n === 1 ? "" : "s"}, ${summary.infectedNodeCount} infected graph node${

@@ -25,10 +25,14 @@ function fixtureDirsWithExpected(): string[] {
     .readdirSync(fixturesRoot, { withFileTypes: true })
     .filter((d) => d.isDirectory())
     .map((d) => d.name)
-    .filter((name) => fs.existsSync(path.join(fixturesRoot, name, "expected.json")));
+    .filter((name) =>
+      fs.existsSync(path.join(fixturesRoot, name, "expected.json")),
+    );
 }
 
-function key(s: Pick<AnySource, "filePath" | "line" | "column" | "name" | "sourceKind">): string {
+function key(
+  s: Pick<AnySource, "filePath" | "line" | "column" | "name" | "sourceKind">,
+): string {
   return `${s.sourceKind}\0${s.filePath}\0${s.line}\0${s.column}\0${s.name}`;
 }
 

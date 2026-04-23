@@ -1,19 +1,20 @@
 # any-map — Detailed Build Plan
 
-> **Status:** living document. **m6** (formats, `graph`, filters, fail thresholds, composite action) landed; see git tag / changelog.
+> **Status:** Living document. **0.1.0** is on npm; milestones **m2–m6** are implemented (see [CHANGELOG](./CHANGELOG.md)). Remaining items are v1.0 polish and criteria in §11.
 > **Owner:** @anasm266
-> **Target v1.0 release:** ~7 weeks from kickoff.
 
 ## 0. Summary
 
 A CLI tool that treats a TypeScript project as a directed graph of type-flow relationships, classifies every `any` source, propagates "infection" forward through the graph, and ranks sources by blast radius + greedy set-cover so users know which few fixes restore the most type safety.
 
-Public artifacts at v1.0:
+**Shipped today (0.1.0):**
 
-- `any-map` CLI on npm (ESM + CJS).
-- `any-map/core` library export for programmatic use.
-- GitHub Action wrapper repo (`anasm266/any-map-action`).
-- Blog post: _"Treating TypeScript's `any` as a graph reachability problem."_
+- **`any-map` on npm** — CLI binary plus programmatic API from the **same** package (`import { classifyScan, … } from "any-map"`). There is no separate `any-map/core` package or export path.
+- **Reusable GitHub Action** — [`.github/actions/any-map-scan`](./.github/actions/any-map-scan/action.yml) in **this** repository (not a separate `any-map-action` repo).
+
+**Still open for v1.0:**
+
+- Broader benchmark coverage, published blog post (_"Treating TypeScript's `any` as a graph reachability problem"_ — [draft](./docs/treating-typescript-any-as-graph-reachability.md)), and §11 checklist completion.
 
 ---
 
@@ -33,7 +34,7 @@ I've shipped comparable integration projects (typing-race) in days. any-map is a
 | ------------------ | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
 | Language           | TypeScript 6.0+ (strict)                                                       | TS 6 is current as of Apr 2026.                                                                                         |
 | Compiler access    | Raw `typescript` for hot paths, `ts-morph` 28 for ergonomics in tests/fixtures | ts-morph's manipulation overhead is unnecessary for read-only analysis. Use `ts-morph` only where its convenience pays. |
-| Runtime target     | Node 22 LTS (`.nvmrc`), test on Node 20/22/24 in CI                            | 22 is Maintenance LTS; 24 is Active LTS. Covers ~all users.                                                             |
+| Runtime target     | **Node 20+** (`package.json` `engines`); CI matrix **20 / 22 / 24** on Ubuntu  | No `.nvmrc` in-repo — use `engines` + CI as the source of truth.                                                        |
 | CLI framework      | `commander` 14                                                                 | Mature, small, no surprises.                                                                                            |
 | Table output       | `cli-table3` 0.6                                                               | Standard.                                                                                                               |
 | Colors             | `picocolors` 1.1                                                               | Smaller than chalk, CJS-safe, dual-format friendly.                                                                     |
@@ -81,7 +82,12 @@ I've shipped comparable integration projects (typing-race) in days. any-map is a
 // NodeId is stable across runs (sha1 of file:line:col:name).
 type NodeId = string;
 
-type NodeKind = "variable" | "parameter" | "return" | "property" | "import-binding";
+type NodeKind =
+  | "variable"
+  | "parameter"
+  | "return"
+  | "property"
+  | "import-binding";
 
 type SourceKind =
   | "explicit-any" // : any, any[], Record<string, any>, { [k: string]: any }
@@ -315,7 +321,7 @@ Each milestone ends with a commit tagged `m{N}` and a working binary. If week en
 - `--format table|json|dot`.
 - `any-map graph [--output out.dot]`.
 - `--source-kinds`, `--ignore`, `--top`, `--fail-above N`, `--fail-coverage X%` flags.
-- `anasm266/any-map-action` wrapper repo with `action.yml` + PR-comment formatter.
+- Composite reusable action in this repo ([`.github/actions/any-map-scan`](./.github/actions/any-map-scan/action.yml)); optional PR-comment formatting later.
 - Benchmark numbers in main README (table: repo, files, sources, infected %, top-3 coverage %).
 - Published `0.4.0` (RC).
 
@@ -426,17 +432,17 @@ v1.1+ backlog (do not touch until v1 ships):
 
 ## 11. Definition of done (v1.0)
 
-- [ ] All 6 source kinds detected.
-- [ ] Graph construction passes §5.2 edge table tests.
-- [ ] Forward propagation + trace both work end-to-end.
-- [ ] Blast radius + set-cover ranking both implemented.
-- [ ] `scan`, `trace`, `graph` commands all functional.
-- [ ] `--format table|json|dot` works.
-- [ ] `--fail-above`, `--fail-coverage` CI flags work.
-- [ ] Fixture recall ≥95%, precision ≥90%.
-- [ ] Benchmark table in README with ≥4 real repos.
-- [ ] GitHub Action wrapper repo published.
-- [ ] Blog post published.
-- [ ] npm downloads ≥50/week at 2 weeks post-launch (soft signal).
+- [x] All 6 source kinds detected.
+- [x] Graph construction + unit tests for core edges (see `tests/unit/graph-builder.test.ts`; §5.2 is the design target).
+- [x] Forward propagation + trace both work end-to-end.
+- [x] Blast radius + greedy set-cover ranking both implemented.
+- [x] `scan`, `trace`, `graph` commands all functional.
+- [x] `--format table|json|dot` works.
+- [x] `--fail-above`, `--fail-coverage` CI flags work.
+- [x] Fixture recall tests (`tests/eval/fixtures-recall.test.ts`); numeric ≥95% / ≥90% targets remain goals, not hard gates.
+- [ ] Benchmark table in README with **≥4** real TS-native repos (currently 2 + smoke fixture).
+- [x] Reusable GitHub Action published **in this repo** (`.github/actions/any-map-scan`).
+- [ ] Blog post published (draft: [docs/treating-typescript-any-as-graph-reachability.md](./docs/treating-typescript-any-as-graph-reachability.md)).
+- [ ] npm adoption signal (e.g. downloads / issues) — soft.
 
-When all checked: tag `v1.0.0`.
+When remaining items are satisfied: tag **`v1.0.0`**.
