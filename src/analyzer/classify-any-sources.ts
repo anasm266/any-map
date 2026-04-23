@@ -1,7 +1,11 @@
 import ts from "typescript";
 import type { AnySource } from "../types.js";
 import { findExplicitAnySources } from "./classify-explicit-any.js";
-import { isFromNodeModulesOrDts, toProjectRelativePath } from "./load-project.js";
+import {
+  isFromNodeModulesOrDts,
+  isJavaScriptInputFile,
+  toProjectRelativePath,
+} from "./load-project.js";
 
 function isErrorType(t: ts.Type): boolean {
   return (t as ts.Type & { intrinsicName?: string }).intrinsicName === "error";
@@ -175,6 +179,7 @@ function findUntypedImportSources(
 
   for (const sf of program.getSourceFiles()) {
     if (isFromNodeModulesOrDts(sf)) continue;
+    if (isJavaScriptInputFile(sf)) continue;
     visit(sf);
   }
   return out;
@@ -224,6 +229,7 @@ function findUntypedReturnSources(
 
   for (const sf of program.getSourceFiles()) {
     if (isFromNodeModulesOrDts(sf)) continue;
+    if (isJavaScriptInputFile(sf)) continue;
     visit(sf);
   }
   return out;
@@ -268,6 +274,7 @@ function findCatchBindingSources(
 
   for (const sf of program.getSourceFiles()) {
     if (isFromNodeModulesOrDts(sf)) continue;
+    if (isJavaScriptInputFile(sf)) continue;
     visit(sf);
   }
   return out;
@@ -315,6 +322,7 @@ function findImplicitParamSources(
 
   for (const sf of program.getSourceFiles()) {
     if (isFromNodeModulesOrDts(sf)) continue;
+    if (isJavaScriptInputFile(sf)) continue;
     visit(sf);
   }
   return out;

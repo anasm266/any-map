@@ -45,6 +45,15 @@ describe("intra-module graph (m3)", () => {
     expect(g.edges.some((e) => e.reason === "call-return" && e.to === yId)).toBe(true);
   });
 
+  it("call-return: y = id(1) assignment statement → return slot → y", () => {
+    const g = graphFor({
+      "src/index.ts": `function id(n: number): number { return n; }\nlet y;\ny = id(1);\n`,
+    });
+    const yId = g.nodes.find((n) => n.name === "y")?.id;
+    expect(yId).toBeDefined();
+    expect(g.edges.some((e) => e.reason === "call-return" && e.to === yId)).toBe(true);
+  });
+
   it("parameter-binding: f(actual) → param formal", () => {
     const g = graphFor({
       "src/index.ts": `function f(formal: number): void { void formal; }\nconst actual = 1;\nf(actual);\n`,
@@ -141,5 +150,27 @@ describe("propagation + blast (m4)", () => {
     });
     const n = g.nodes.find((x) => x.name === "only" && x.isSource);
     expect(n?.infectedBy).toContain(n?.id);
+  });
+
+  it("untyped-return source infects caller binding via return slot + call-return", () => {
+    const g = graphFor({
+      "src/index.ts": `function f() {\n  return JSON.parse("");\n}\nconst y = f();\n`,
+    });
+    const ret = g.nodes.find((n) => n.kind === "return" && n.name === "f" && n.isSource);
+    const y = g.nodes.find((n) => n.name === "y");
+    expect(ret).toBeDefined();
+    expect(y).toBeDefined();
+    expect(ret?.sourceKind).toBe("untyped-return");
+    expect(y?.infectedBy).toContain(ret?.id);
+  });
+
+  it("untyped-return infects lhs of y = f() assignment statement", () => {
+    const g = graphFor({
+      "src/index.ts": `function f() {\n  return JSON.parse("");\n}\nlet y;\ny = f();\n`,
+    });
+    const ret = g.nodes.find((n) => n.kind === "return" && n.name === "f" && n.isSource);
+    const y = g.nodes.find((n) => n.name === "y");
+    expect(ret).toBeDefined();
+    expect(y?.infectedBy).toContain(ret?.id);
   });
 });

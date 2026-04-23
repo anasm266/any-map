@@ -14,7 +14,7 @@ export interface ScanOptions extends SourceFilters {
   targetPath: string;
   json?: boolean;
   dumpGraph?: boolean;
-  /** Limit `sourcesRankedByBlast` (and CLI table) to the first N rows after ranking. */
+  /** Limit display / JSON list fields to N rows; full scan is computed first. */
   top?: number;
 }
 
@@ -78,6 +78,22 @@ function mergeRankedWithOrphans(ranked: SourceRanked[], allSources: AnySource[])
 }
 
 /**
+ * Limit table / JSON list views. Does not change totals (`sources`, `infectedNodeCount`).
+ * CI `--fail-coverage` must run on the **untruncated** summary from `runFullScan`.
+ */
+export function applyTopToScanSummary(summary: ScanSummary, top?: number): ScanSummary {
+  if (top === undefined || top <= 0) return summary;
+  const ranked = summary.sourcesRankedByBlast
+    .slice(0, top)
+    .map((r, i): SourceRanked => ({ ...r, rank: i + 1 }));
+  return {
+    ...summary,
+    sourcesRankedByBlast: ranked,
+    greedyCoverPicks: summary.greedyCoverPicks.slice(0, top),
+  };
+}
+
+/**
  * Single graph build: summary + serialized graph (for DOT / `--dump-graph` / CI).
  */
 export function runFullScan(options: ScanOptions): FullScanResult {
@@ -96,11 +112,7 @@ export function runFullScan(options: ScanOptions): FullScanResult {
   const infectedNodeCount = builder.getInfectedNodeCount();
   const greedyCoverPicks = builder.greedySetCoverPicks(blastRanked);
 
-  let ranked = mergeRankedWithOrphans(blastRanked, sources);
-
-  if (options.top !== undefined && options.top > 0) {
-    ranked = ranked.slice(0, options.top).map((r, i) => ({ ...r, rank: i + 1 }));
-  }
+  const ranked = mergeRankedWithOrphans(blastRanked, sources);
 
   const summary: ScanSummary = {
     sources,
@@ -120,9 +132,11 @@ export function classifyScan(options: ScanOptions & { dumpGraph: true }): Serial
 export function classifyScan(options?: ScanOptions): ScanSummary;
 export function classifyScan(options: ScanOptions = { targetPath: "." }): ScanResult {
   if (options.dumpGraph) {
-    const { top, ...rest } = options;
+    const { top, dumpGraph: _dumpGraph, ...rest } = options;
     void top;
     return runFullScan(rest).serializedGraph;
   }
-  return runFullScan(options).summary;
+  const { top, ...rest } = options;
+  const { summary } = runFullScan(rest);
+  return applyTopToScanSummary(summary, top);
 }

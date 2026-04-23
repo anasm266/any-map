@@ -14,7 +14,7 @@ A single `any` in one utility file can silently propagate through assignments, d
 
 ## Status
 
-> 🚧 Pre-release. See [PLAN.md](./PLAN.md) for the full v1 roadmap and milestones.
+Published on npm as **`any-map`**. Roadmap and milestones: [PLAN.md](./PLAN.md).
 
 ## What it does (v1)
 
@@ -24,41 +24,58 @@ A single `any` in one utility file can silently propagate through assignments, d
 | `any-map trace <loc> [path]` | Print type-flow paths from each `any` source to the symbol at `loc` (`file:line:col`). |
 | `any-map graph [path]`       | Emit the intra-module type-flow graph as Graphviz DOT (`-o out.dot` or stdout).        |
 
-`any-map scan`: `--format table|json|dot` (or legacy `--json`), `--dump-graph` (JSON graph snapshot), `--top`, `--source-kinds`, `--ignore` (comma-separated picomatch globs), `--fail-above N`, `--fail-coverage P` (top-3 greedy cumulative % must be ≥ P). CI: reusable workflow step in [.github/actions/any-map-scan/action.yml](.github/actions/any-map-scan/action.yml) (`npx any-map@… scan . ${{ inputs.args }}`).
+`any-map scan`: `--format table|json|dot` (or legacy `--json`), `--dump-graph` (JSON graph snapshot), `--top N` (limits **both** the greedy fix-order table and the blast-ranked table, and the matching JSON arrays; `--fail-coverage` still uses the full greedy run), `--source-kinds`, `--ignore` (comma-separated picomatch globs), `--fail-above N`, `--fail-coverage P` (top-3 greedy cumulative % must be ≥ P). CI: reusable workflow step in [.github/actions/any-map-scan/action.yml](.github/actions/any-map-scan/action.yml) (`npx any-map@… scan . ${{ inputs.args }}`).
 
-### Snapshot benchmark (fixture)
+### Benchmark (real repos)
 
-| Snapshot               | TS project files | `any` sources | Infected graph nodes | Top-3 greedy cum. % |
-| ---------------------- | ---------------- | ------------- | -------------------- | ------------------- |
-| `tests/fixtures/smoke` | 1                | 4             | 5                    | 80%                 |
+| Repo                                                  | Project files | `any` sources | Infected nodes | Top blast\* | Top-3 greedy cum. % |
+| ----------------------------------------------------- | ------------- | ------------- | -------------- | ----------- | ------------------- |
+| [typeorm/typeorm](https://github.com/typeorm/typeorm) | 3,336         | 1,460         | 908            | 80          | 16%                 |
+| [knex/knex](https://github.com/knex/knex)             | 142           | 12            | 2              | 2           | 100%                |
 
-(Larger repo numbers will ship in v1 benchmark table; this row is reproducible via `pnpm build` + `classifyScan({ targetPath: "tests/fixtures/smoke" })`.)
+\*Highest blast-radius among ranked sources (tie broken by sort order). TypeORM numbers from a clone with `pnpm install` and default `tsconfig`; Knex is mostly JavaScript, so source count stays small by design (inference-only `any` on `.js` is not treated as an origin).
 
 `any-map trace src/foo.ts:12:5` prints forward hops (`reason` per edge) from each source to the traced binding; use `--json` for machine-readable `TraceReport`.
 
-### Output preview (target for v1)
+### Sample CLI output (TypeORM, `--top 10`)
 
 ```text
-$ npx any-map scan
-Scanning src/ (142 files, 8,421 symbols)...
-Found 47 any sources, 312 infected symbols (3.7% of codebase)
+$ any-map scan ./typeorm --top 10
+Scanning 3336 project files...
+Found 1460 any sources, 908 infected graph nodes.
 
-TOP SOURCES BY BLAST RADIUS:
-┌──────┬─────────────────────────────────────┬──────────┬────────────┬──────────────────┐
-│ Rank │ Source                              │ Kind     │ Blast (|)  │ Cumulative fix % │
-├──────┼─────────────────────────────────────┼──────────┼────────────┼──────────────────┤
-│ 1    │ src/api/client.ts:23:14 `response`  │ as-any   │ 127 (40%)  │ 40%              │
-│ 2    │ src/utils/parse.ts:8:31 `parseJson` │ return   │  89 (28%)  │ 66%              │
-│ 3    │ src/legacy/index.ts:1:1 `legacy`    │ untyped  │  44 (14%)  │ 80%              │
-│ 4    │ src/errors.ts:12:9 `e`              │ catch    │  21 ( 6%)  │ 86%              │
-└──────┴─────────────────────────────────────┴──────────┴────────────┴──────────────────┘
+Fix order (greedy set-cover)
+ Pick  Cum.%  +Nodes  Blast  Bl#  File                                              Line:Col   Kind            Name
+ 1     9      80      80     2    src/util/TreeRepositoryUtils.ts                   70:40      explicit-any    childEntity
+ 2     13     38      38     25   src/util/ApplyValueTransformers.ts                5:12       untyped-return  transformFrom
+ 3     16     24      28     41   src/metadata/EntityMetadata.ts                    574:13     explicit-any    ret
+ 4     17     12      12     42   src/metadata/EntityListenerMetadata.ts            81:5       untyped-return  execute
+ 5     18     9       9      44   src/driver/postgres/PostgresDriver.ts             486:38     explicit-any    extensionsMetadata
+ 6     19     5       5      46   src/query-builder/RelationLoader.ts               517:28     explicit-any    value
+ 7     19     4       4      47   src/driver/cockroachdb/CockroachQueryRunner.ts  3294:23    untyped-return  getSchemaFromKey
+ 8     19     4       4      49   src/driver/sap/SapQueryRunner.ts                  2846:19    untyped-return  getSchemaFromKey
+ 9     20     4       4      50   src/driver/sqlserver/SqlServerQueryRunner.ts      3273:23    untyped-return  getSchemaFromKey
+ 10    20     4       4      51   test/github-issues/4219/shim.ts                   1:5        explicit-any    _Shim
 
-FIX RECOMMENDATION:
-Address sources #1-3 to eliminate 80% of any infection.
-Run `any-map trace src/api/client.ts:23:14` for details on source #1.
+By blast radius
+ Rank  Blast  File                                               Line:Col   Kind          Name
+ 1     80     src/query-builder/SelectQueryBuilder.ts            1764:15    as-any        result
+ 2     80     src/util/TreeRepositoryUtils.ts                    70:40      explicit-any  childEntity
+ 3     79     src/entity-manager/MongoEntityManager.ts           1271:9     explicit-any  idMap
+ 4     79     src/metadata/ColumnMetadata.ts                     917:24     explicit-any  entity
+ 5     79     src/persistence/tree/NestedSetSubjectExecutor.ts   339:9      explicit-any  parent
+ 6     79     src/util/TreeRepositoryUtils.ts                    47:9       explicit-any  entity
+ 7     79     src/util/TreeRepositoryUtils.ts                    86:9       explicit-any  entity
+ 8     78     src/driver/aurora-mysql/AuroraMysqlDriver.ts       544:28     explicit-any  value
+ 9     78     src/driver/aurora-postgres/AuroraPostgresDriver.ts 139:28     explicit-any  value
+ 10    78     src/driver/cockroachdb/CockroachDriver.ts          407:28     explicit-any  value
 ```
 
+(Tables above are the same data the tool prints; spacing matches the fixed-width layout from a real run. Install dependencies in the TypeORM clone before scanning.)
+
 ## How it works
+
+**`allowJs` JavaScript:** inference-only kinds (`implicit-param`, `untyped-return`, `untyped-import`, `catch-binding`) are not reported for plain `.js`/`.jsx`/`.mjs`/`.cjs` inputs, because TypeScript often infers `any` there without the developer “choosing” `any`. That keeps source counts and greedy set-cover meaningful on mixed TS/JS codebases. Explicit written `any` (and other non–inference-only classifiers) still apply where applicable.
 
 1. **Classify** every `any` source (explicit `: any`, `as any`, untyped imports, untyped returns, `catch (e)`, implicit params).
 2. **Build** a directed graph where each edge represents type flow (`const a = b` → edge `b → a`).
@@ -84,7 +101,7 @@ Full algorithm details in [PLAN.md §5](./PLAN.md#5-algorithms).
 - [x] **m4:** forward propagation + blast-radius ranking; `scan --top N`; JSON field `sourcesRankedByBlast` (rank, blast, graph node id).
 - [x] **m5:** greedy set-cover table + JSON; `any-map trace`; `scripts/overlap-analysis.mjs` after build.
 - [x] **m6:** `--format table|json|dot`, `any-map graph`, `--source-kinds`, `--ignore`, `--fail-above`, `--fail-coverage`, composite GitHub Action.
-- [ ] v0.1 (remaining): real-repo benchmark table, polish
+- [x] v0.1: real-repo benchmark table (TypeORM + Knex) in README; `--top` applies to both scan tables.
 - [ ] v1.0: launch blog post, broader benchmarks
 
 Detailed week-by-week milestones in [PLAN.md](./PLAN.md).

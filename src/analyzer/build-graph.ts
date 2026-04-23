@@ -310,6 +310,22 @@ export class GraphBuilder {
     }
   }
 
+  private visitExpressionStatement(node: ts.ExpressionStatement): void {
+    const e = node.expression;
+    if (ts.isCallExpression(e)) {
+      this.edgesFromCall(e);
+      return;
+    }
+    if (
+      ts.isBinaryExpression(e) &&
+      e.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      ts.isCallExpression(e.right)
+    ) {
+      const lhsId = ts.isIdentifier(e.left) ? this.exprToNodeId(e.left) : undefined;
+      this.edgesFromCall(e.right, lhsId);
+    }
+  }
+
   private visitVariableDeclaration(node: ts.VariableDeclaration): void {
     if (ts.isIdentifier(node.name)) {
       const lhs = this.ensureNamedDecl(node, "variable");
@@ -377,9 +393,8 @@ export class GraphBuilder {
     }
 
     if (ts.isImportDeclaration(node)) this.visitImportDeclaration(node);
-    else if (ts.isExpressionStatement(node) && ts.isCallExpression(node.expression)) {
-      this.edgesFromCall(node.expression);
-    } else if (ts.isVariableDeclaration(node)) this.visitVariableDeclaration(node);
+    else if (ts.isExpressionStatement(node)) this.visitExpressionStatement(node);
+    else if (ts.isVariableDeclaration(node)) this.visitVariableDeclaration(node);
     else if (ts.isReturnStatement(node)) this.visitReturnStatement(node);
     else if (ts.isPropertyDeclaration(node)) this.visitPropertyDeclaration(node);
     else if (
@@ -403,13 +418,16 @@ export class GraphBuilder {
 
   applySources(sources: AnySource[]): void {
     for (const s of sources) {
+      // `untyped-return` is reported at the function/binding name, but flow to callers goes
+      // from the synthetic `return` slot (`ensureReturnNode`), not the value node for `f`.
+      const useReturnSlot = s.sourceKind === "untyped-return";
       for (const n of this.nodes.values()) {
         if (
           n.filePath === s.filePath &&
           n.line === s.line &&
           n.column === s.column &&
           n.name === s.name &&
-          n.kind !== "return"
+          (useReturnSlot ? n.kind === "return" : n.kind !== "return")
         ) {
           n.isSource = true;
           n.sourceKind = s.sourceKind;
