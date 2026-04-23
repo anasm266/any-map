@@ -1,6 +1,6 @@
 import Table from "cli-table3";
 import pc from "picocolors";
-import { runFullScan } from "../analyzer/run-scan.js";
+import { buildScanOptions, runFullScan } from "../analyzer/run-scan.js";
 import type { ScanSummary, SourceKind } from "../types.js";
 import { serializedGraphToDot } from "../format/to-dot.js";
 import { applyScanFailureResult, evaluateScanFailure } from "./scan-failure.js";
@@ -26,23 +26,18 @@ export async function runScanCommand(
   const basePath = targetPath ?? ".";
   const format: ScanCliFormat = options.format ?? (options.json === true ? "json" : "table");
 
-  const scanOpts = {
-    targetPath: basePath,
-    sourceKinds: options.sourceKinds,
-    ignoreGlobs: options.ignoreGlobs,
-    top: options.top,
-  };
-
   if (options.dumpGraph === true) {
-    const { top, ...rest } = scanOpts;
-    void top;
-    const { summary, serializedGraph } = runFullScan(rest);
+    const { summary, serializedGraph } = runFullScan(
+      buildScanOptions(basePath, options.sourceKinds, options.ignoreGlobs),
+    );
     console.log(JSON.stringify(serializedGraph, null, 2));
     applyScanFailureResult(evaluateScanFailure(summary, options));
     return;
   }
 
-  const { summary, serializedGraph } = runFullScan(scanOpts);
+  const { summary, serializedGraph } = runFullScan(
+    buildScanOptions(basePath, options.sourceKinds, options.ignoreGlobs, options.top),
+  );
 
   if (format === "json") {
     console.log(JSON.stringify(summary, null, 2));

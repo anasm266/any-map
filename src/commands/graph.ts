@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { runFullScan } from "../analyzer/run-scan.js";
+import { buildScanOptions, runFullScan } from "../analyzer/run-scan.js";
 import type { SourceKind } from "../types.js";
 import { serializedGraphToDot } from "../format/to-dot.js";
 
@@ -11,11 +11,9 @@ export async function runGraphCommand(
     ignoreGlobs?: string[];
   },
 ): Promise<void> {
-  const { serializedGraph } = runFullScan({
-    targetPath: targetPath ?? ".",
-    sourceKinds: options.sourceKinds,
-    ignoreGlobs: options.ignoreGlobs,
-  });
+  const { serializedGraph } = runFullScan(
+    buildScanOptions(targetPath ?? ".", options.sourceKinds, options.ignoreGlobs),
+  );
 
   const dot = serializedGraphToDot(serializedGraph);
   if (options.output) {

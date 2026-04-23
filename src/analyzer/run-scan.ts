@@ -1,4 +1,4 @@
-import type { AnySource, ScanSummary, SourceRanked } from "../types.js";
+import type { AnySource, ScanSummary, SourceKind, SourceRanked } from "../types.js";
 import { GraphBuilder } from "./build-graph.js";
 import type { SourceFilters } from "./filter-sources.js";
 import { filterSources } from "./filter-sources.js";
@@ -16,6 +16,23 @@ export interface ScanOptions extends SourceFilters {
   dumpGraph?: boolean;
   /** Limit `sourcesRankedByBlast` (and CLI table) to the first N rows after ranking. */
   top?: number;
+}
+
+/**
+ * Build `ScanOptions` for `exactOptionalPropertyTypes`: only set keys when arguments are defined
+ * (avoid `{ sourceKinds: undefined }` object literals).
+ */
+export function buildScanOptions(
+  targetPath: string,
+  sourceKinds?: SourceKind[],
+  ignoreGlobs?: string[],
+  top?: number,
+): ScanOptions {
+  const o: ScanOptions = { targetPath };
+  if (sourceKinds !== undefined) o.sourceKinds = sourceKinds;
+  if (ignoreGlobs !== undefined) o.ignoreGlobs = ignoreGlobs;
+  if (top !== undefined) o.top = top;
+  return o;
 }
 
 export type ScanResult = ScanSummary | SerializedGraph;
