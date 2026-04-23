@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 import { Command } from "commander";
-import { parseIgnoreGlobsList, parseSourceKindsList } from "./analyzer/filter-sources.js";
+import {
+  parseIgnoreGlobsList,
+  parseSourceKindsList,
+} from "./analyzer/filter-sources.js";
 import { runGraphCommand } from "./commands/graph.js";
 import { runScanCommand, type ScanCliFormat } from "./commands/scan.js";
 import { runTraceCommand } from "./commands/trace.js";
@@ -37,10 +40,17 @@ function parseFailAboveOpt(raw: string | undefined): number | undefined {
   return n;
 }
 
-function scanFormatFromOpts(opts: { format?: string; json?: boolean }): ScanCliFormat | undefined {
+function scanFormatFromOpts(opts: {
+  format?: string;
+  json?: boolean;
+}): ScanCliFormat | undefined {
   if (process.exitCode) return undefined;
   if (opts.format !== undefined) {
-    if (opts.format !== "table" && opts.format !== "json" && opts.format !== "dot") {
+    if (
+      opts.format !== "table" &&
+      opts.format !== "json" &&
+      opts.format !== "dot"
+    ) {
       console.error("any-map scan: --format must be table, json, or dot");
       process.exitCode = 1;
       return undefined;
@@ -59,7 +69,11 @@ program
   .argument("[path]", "Project file, directory, or tsconfig root", ".")
   .option("--format <mode>", "Output: table, json, or dot (Graphviz)")
   .option("--json", "Same as --format json", false)
-  .option("--dump-graph", "Emit intra-module graph JSON (nodes + edges + infectedBy)", false)
+  .option(
+    "--dump-graph",
+    "Emit intra-module graph JSON (nodes + edges + infectedBy)",
+    false,
+  )
   .option(
     "--top <n>",
     "Limit rows in both table sections and in JSON `greedyCoverPicks` / `sourcesRankedByBlast` (CI thresholds still use full greedy coverage)",
@@ -72,7 +86,10 @@ program
     "--ignore <globs>",
     "Comma-separated picomatch globs; matching files excluded from sources",
   )
-  .option("--fail-above <n>", "Exit 1 if the number of any sources is greater than N")
+  .option(
+    "--fail-above <n>",
+    "Exit 1 if the number of any sources is greater than N",
+  )
   .option(
     "--fail-coverage <pct>",
     "Exit 1 if top-3 greedy cumulative coverage %% is below pct (0–100, optional %% suffix)",
@@ -168,15 +185,26 @@ program
 
 program
   .command("trace")
-  .description("Show type-flow paths from each contributing `any` source to a symbol (m5).")
-  .argument("<loc>", "file:line:column or file:line (project-relative path recommended)")
+  .description(
+    "Show type-flow paths from each contributing `any` source to a symbol (m5).",
+  )
+  .argument(
+    "<loc>",
+    "file:line:column or file:line (project-relative path recommended)",
+  )
   .argument("[path]", "Project file, directory, or tsconfig root", ".")
   .option("--json", "Emit trace report as JSON", false)
-  .action(async (loc: string, scanPath: string | undefined, opts: { json?: boolean }) => {
-    const flags: { json?: boolean } = {};
-    if (opts.json === true) flags.json = true;
-    await runTraceCommand(loc, scanPath, flags);
-  });
+  .action(
+    async (
+      loc: string,
+      scanPath: string | undefined,
+      opts: { json?: boolean },
+    ) => {
+      const flags: { json?: boolean } = {};
+      if (opts.json === true) flags.json = true;
+      await runTraceCommand(loc, scanPath, flags);
+    },
+  );
 
 void program.parseAsync(process.argv).catch((err: unknown) => {
   console.error(err);

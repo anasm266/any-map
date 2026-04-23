@@ -6,7 +6,7 @@
 
 ## 2. Idea
 
-Model the program as a directed graph of type-relevant flows (assignments, call returns, imports, …). Mark classifier-identified `any` **sources**, run forward reachability (BFS), **rank by blast radius**, then **greedy set-cover** over infected nodes to suggest a fix order.
+Model the program as a directed graph of type-relevant flows (assignments, call returns, imports, …). Mark classifier-identified `any` **sources**, run forward reachability (BFS), **rank by blast radius** (largest infected set per source), and report a **greedy set-cover** fix order that repeatedly picks the source covering the most still-uncovered infected nodes—the two orderings can differ when sources overlap downstream. `any-map scan` prints both.
 
 ## 3. Bugs we hit on real code (and fixes)
 

@@ -10,6 +10,12 @@ export function makeNodeId(
   name: string,
   discriminator = "",
 ): string {
-  const payload = [filePath, String(line), String(column), name, discriminator].join("\0");
+  const payload = [
+    filePath,
+    String(line),
+    String(column),
+    name,
+    discriminator,
+  ].join("\0");
   return createHash("sha1").update(payload).digest("hex");
 }

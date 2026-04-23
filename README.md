@@ -20,7 +20,7 @@ A single `any` in a utility can propagate through assignments, destructuring, an
 
 | Command                      | Purpose                                                                                |
 | ---------------------------- | -------------------------------------------------------------------------------------- |
-| `any-map scan [path]`        | Analyze a TS project; table / JSON / DOT; filters + CI thresholds.                    |
+| `any-map scan [path]`        | Analyze a TS project; table / JSON / DOT; filters + CI thresholds.                     |
 | `any-map trace <loc> [path]` | Print type-flow paths from each `any` source to the symbol at `loc` (`file:line:col`). |
 | `any-map graph [path]`       | Emit the intra-module type-flow graph as Graphviz DOT (`-o out.dot` or stdout).        |
 
@@ -93,12 +93,12 @@ Details: [PLAN.md §5](./PLAN.md#5-algorithms).
 
 ## Why not only type-coverage / ESLint?
 
-| Tool                                 | What it tells you                     | What any-map adds                                      |
-| ------------------------------------ | ------------------------------------- | ------------------------------------------------------ |
-| `tsc --noImplicitAny`                | Where `any` is inferred               | —                                                      |
-| `@typescript-eslint/no-explicit-any` | Where `any` is written                | —                                                      |
-| `type-coverage`                      | % of typed identifiers                | —                                                      |
-| **any-map**                          | Source → infection graph, blast, rank | Propagation + greedy order + `trace`                   |
+| Tool                                 | What it tells you                     | What any-map adds                    |
+| ------------------------------------ | ------------------------------------- | ------------------------------------ |
+| `tsc --noImplicitAny`                | Where `any` is inferred               | —                                    |
+| `@typescript-eslint/no-explicit-any` | Where `any` is written                | —                                    |
+| `type-coverage`                      | % of typed identifiers                | —                                    |
+| **any-map**                          | Source → infection graph, blast, rank | Propagation + greedy order + `trace` |
 
 ## Roadmap
 
@@ -110,7 +110,7 @@ Details: [PLAN.md §5](./PLAN.md#5-algorithms).
 - [x] v0.1: npm publish; TypeORM + Knex benchmark table in this README.
 - [ ] **v1.0:** launch post (lead with real benchmark nuance), more benchmark repos, GitHub **Release** + tag aligned with npm, green release CI (see below), optional README screenshot.
 
-Detailed milestones: [PLAN.md](./PLAN.md).
+[CHANGELOG](./CHANGELOG.md) · detailed design history: [PLAN.md](./PLAN.md).
 
 ## Scope boundaries (v1 non-goals)
 

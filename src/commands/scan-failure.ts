@@ -18,7 +18,9 @@ export function evaluateScanFailure(
   if (opts.failCoveragePct !== undefined) {
     const picks = summary.greedyCoverPicks;
     const cov =
-      picks.length === 0 ? 100 : picks[Math.min(2, picks.length - 1)]!.cumulativeCoveragePct;
+      picks.length === 0
+        ? 100
+        : picks[Math.min(2, picks.length - 1)]!.cumulativeCoveragePct;
     if (cov < opts.failCoveragePct) {
       return {
         failed: true,
@@ -29,7 +31,10 @@ export function evaluateScanFailure(
   return { failed: false };
 }
 
-export function applyScanFailureResult(result: { failed: boolean; message?: string }): void {
+export function applyScanFailureResult(result: {
+  failed: boolean;
+  message?: string;
+}): void {
   if (result.failed && result.message) {
     console.error(result.message);
     process.exitCode = 1;

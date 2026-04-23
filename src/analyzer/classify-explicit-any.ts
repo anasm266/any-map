@@ -1,6 +1,9 @@
 import ts from "typescript";
 import type { AnySource } from "../types.js";
-import { isFromNodeModulesOrDts, toProjectRelativePath } from "./load-project.js";
+import {
+  isFromNodeModulesOrDts,
+  toProjectRelativePath,
+} from "./load-project.js";
 
 const SOURCE_KIND = "explicit-any" as const;
 
@@ -13,7 +16,10 @@ function isAsAnyAssertion(anyKw: ts.Node): boolean {
   );
 }
 
-function typeSubtreeContains(root: ts.TypeNode | undefined, anyKw: ts.Node): boolean {
+function typeSubtreeContains(
+  root: ts.TypeNode | undefined,
+  anyKw: ts.Node,
+): boolean {
   if (!root) return false;
   let found = false;
   const visit = (n: ts.Node): void => {
@@ -28,7 +34,10 @@ function typeSubtreeContains(root: ts.TypeNode | undefined, anyKw: ts.Node): boo
   return found;
 }
 
-function declarationOwnsAnyInAnnotatedType(decl: ts.Node, anyKw: ts.Node): boolean {
+function declarationOwnsAnyInAnnotatedType(
+  decl: ts.Node,
+  anyKw: ts.Node,
+): boolean {
   if (
     ts.isFunctionDeclaration(decl) ||
     ts.isFunctionExpression(decl) ||
@@ -85,7 +94,10 @@ function getDisplayName(decl: ts.Node): string {
   if (name && ts.isIdentifier(name)) return name.text;
   if (name && ts.isPrivateIdentifier(name)) return name.text;
   if (ts.isVariableDeclaration(decl) && decl.initializer) {
-    if (ts.isArrowFunction(decl.initializer) || ts.isFunctionExpression(decl.initializer)) {
+    if (
+      ts.isArrowFunction(decl.initializer) ||
+      ts.isFunctionExpression(decl.initializer)
+    ) {
       return "(anonymous)";
     }
   }
@@ -105,7 +117,10 @@ function locationForReport(decl: ts.Node): ts.Node {
  * Collect every explicit `: any`-style annotation (including `any[]`, `Record<string, any>`, etc.),
  * excluding `as any` / `<any>` / `satisfies any` assertions (handled in m2).
  */
-export function findExplicitAnySources(program: ts.Program, projectRootAbs: string): AnySource[] {
+export function findExplicitAnySources(
+  program: ts.Program,
+  projectRootAbs: string,
+): AnySource[] {
   const checker = program.getTypeChecker();
   const byDeclaration = new Map<ts.Node, AnySource>();
 
@@ -151,7 +166,9 @@ export function findExplicitAnySources(program: ts.Program, projectRootAbs: stri
       const { line, character } = sf.getLineAndCharacterOfPosition(start);
 
       const t = checker.getTypeAtLocation(typeNode);
-      if ((t as ts.Type & { intrinsicName?: string }).intrinsicName === "error") {
+      if (
+        (t as ts.Type & { intrinsicName?: string }).intrinsicName === "error"
+      ) {
         ts.forEachChild(node, visit);
         return;
       }

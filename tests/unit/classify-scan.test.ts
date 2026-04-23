@@ -13,7 +13,9 @@ describe("scan smoke (mixed kinds)", () => {
 
     expect(summary.fileCount).toBeGreaterThanOrEqual(1);
 
-    const explicit = summary.sources.filter((s) => s.sourceKind === "explicit-any");
+    const explicit = summary.sources.filter(
+      (s) => s.sourceKind === "explicit-any",
+    );
     const asAny = summary.sources.filter((s) => s.sourceKind === "as-any");
 
     expect(explicit).toHaveLength(3);
@@ -33,7 +35,9 @@ describe("scan smoke (mixed kinds)", () => {
     const summary = classifyScan({ targetPath: smokeRoot });
     expect(summary.sourcesRankedByBlast).toHaveLength(summary.sources.length);
     const keys = new Set(
-      summary.sources.map((s) => `${s.filePath}:${s.line}:${s.column}:${s.name}:${s.sourceKind}`),
+      summary.sources.map(
+        (s) => `${s.filePath}:${s.line}:${s.column}:${s.name}:${s.sourceKind}`,
+      ),
     );
     for (const r of summary.sourcesRankedByBlast) {
       const k = `${r.filePath}:${r.line}:${r.column}:${r.name}:${r.sourceKind}`;
@@ -43,9 +47,13 @@ describe("scan smoke (mixed kinds)", () => {
 
   it("ranks by blast descending among graph-backed sources", () => {
     const summary = classifyScan({ targetPath: smokeRoot });
-    const withBlast = summary.sourcesRankedByBlast.filter((r) => r.blastRadius > 0);
+    const withBlast = summary.sourcesRankedByBlast.filter(
+      (r) => r.blastRadius > 0,
+    );
     for (let i = 1; i < withBlast.length; i++) {
-      expect(withBlast[i - 1]!.blastRadius).toBeGreaterThanOrEqual(withBlast[i]!.blastRadius);
+      expect(withBlast[i - 1]!.blastRadius).toBeGreaterThanOrEqual(
+        withBlast[i]!.blastRadius,
+      );
     }
   });
 
@@ -70,7 +78,8 @@ describe("scan smoke (mixed kinds)", () => {
     expect(summary.infectedNodeCount).toBeGreaterThan(0);
     expect(summary.greedyCoverPicks.length).toBeGreaterThan(0);
     expect(
-      summary.greedyCoverPicks[summary.greedyCoverPicks.length - 1]!.cumulativeCoveragePct,
+      summary.greedyCoverPicks[summary.greedyCoverPicks.length - 1]!
+        .cumulativeCoveragePct,
     ).toBe(100);
   });
 
@@ -81,7 +90,9 @@ describe("scan smoke (mixed kinds)", () => {
       sourceKinds: ["explicit-any"],
     });
     expect(onlyExplicit.sources.length).toBeLessThan(full.sources.length);
-    expect(onlyExplicit.sources.every((s) => s.sourceKind === "explicit-any")).toBe(true);
+    expect(
+      onlyExplicit.sources.every((s) => s.sourceKind === "explicit-any"),
+    ).toBe(true);
   });
 });
 

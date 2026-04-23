@@ -7,7 +7,11 @@ import {
   resolveScanRoot,
   toProjectRelativePath,
 } from "./load-project.js";
-import type { TracePathSegment, TracePathToSource, TraceReport } from "./trace-types.js";
+import type {
+  TracePathSegment,
+  TracePathToSource,
+  TraceReport,
+} from "./trace-types.js";
 
 /**
  * Parse `file:line` or `file:line:column` (column defaults to 1).
@@ -20,7 +24,9 @@ export function parseTraceLocation(loc: string): {
 } {
   const lastColon = loc.lastIndexOf(":");
   if (lastColon <= 0) {
-    throw new Error(`Invalid location "${loc}" (expected file:line or file:line:column)`);
+    throw new Error(
+      `Invalid location "${loc}" (expected file:line or file:line:column)`,
+    );
   }
   const tail = loc.slice(lastColon + 1);
   if (!/^\d+$/.test(tail)) {
@@ -95,7 +101,9 @@ export interface TraceOptions {
 export function traceSymbol(options: TraceOptions): TraceReport {
   const root = resolveScanRoot(options.targetPath);
   const { filePath: rawPath, line, column } = parseTraceLocation(options.loc);
-  const absCandidate = path.isAbsolute(rawPath) ? rawPath : path.join(root, rawPath);
+  const absCandidate = path.isAbsolute(rawPath)
+    ? rawPath
+    : path.join(root, rawPath);
   const rel = toProjectRelativePath(path.normalize(absCandidate), root);
 
   const program = createProgramForDirectory(root);

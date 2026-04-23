@@ -23,13 +23,19 @@ export async function runTraceCommand(
   );
 
   if (report.paths.length === 0) {
-    console.log(pc.dim("No `any` sources tag this symbol (clean or outside graph)."));
+    console.log(
+      pc.dim("No `any` sources tag this symbol (clean or outside graph)."),
+    );
     return;
   }
 
   for (const p of report.paths) {
     console.log("");
-    console.log(pc.bold(`${p.sourceKind} ${p.filePath}:${p.line}:${p.column} \`${p.name}\``));
+    console.log(
+      pc.bold(
+        `${p.sourceKind} ${p.filePath}:${p.line}:${p.column} \`${p.name}\``,
+      ),
+    );
     if (p.segments.length === 0) {
       console.log(pc.dim("  (source is the symbol)"));
       continue;

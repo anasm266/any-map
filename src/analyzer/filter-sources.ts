@@ -25,7 +25,9 @@ export function parseSourceKindsList(csv: string): SourceKind[] {
   const out: SourceKind[] = [];
   for (const p of parts) {
     if (!ALL_KINDS.includes(p as SourceKind)) {
-      throw new Error(`Unknown source kind "${p}". Expected one of: ${ALL_KINDS.join(", ")}`);
+      throw new Error(
+        `Unknown source kind "${p}". Expected one of: ${ALL_KINDS.join(", ")}`,
+      );
     }
     out.push(p as SourceKind);
   }
@@ -39,14 +41,19 @@ export function parseIgnoreGlobsList(csv: string): string[] {
     .filter(Boolean);
 }
 
-export function filterSources(sources: AnySource[], filters: SourceFilters): AnySource[] {
+export function filterSources(
+  sources: AnySource[],
+  filters: SourceFilters,
+): AnySource[] {
   let out = sources;
   if (filters.sourceKinds && filters.sourceKinds.length > 0) {
     const set = new Set(filters.sourceKinds);
     out = out.filter((s) => set.has(s.sourceKind));
   }
   if (filters.ignoreGlobs && filters.ignoreGlobs.length > 0) {
-    const matchers = filters.ignoreGlobs.map((g) => picomatch(g, { dot: true }));
+    const matchers = filters.ignoreGlobs.map((g) =>
+      picomatch(g, { dot: true }),
+    );
     out = out.filter((s) => !matchers.some((m) => m(s.filePath)));
   }
   return out;

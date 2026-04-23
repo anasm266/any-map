@@ -19,14 +19,20 @@ function toPosix(p: string): string {
  */
 export function resolveScanRoot(userPath: string): string {
   const abs = path.resolve(userPath);
-  return fs.existsSync(abs) && fs.statSync(abs).isFile() ? path.dirname(abs) : abs;
+  return fs.existsSync(abs) && fs.statSync(abs).isFile()
+    ? path.dirname(abs)
+    : abs;
 }
 
 /**
  * Create a TypeScript program for the tsconfig that governs `rootDir`.
  */
 export function createProgramForDirectory(rootDir: string): ts.Program {
-  const configPath = ts.findConfigFile(rootDir, ts.sys.fileExists, "tsconfig.json");
+  const configPath = ts.findConfigFile(
+    rootDir,
+    ts.sys.fileExists,
+    "tsconfig.json",
+  );
   if (!configPath) {
     throw new Error(
       `Could not find tsconfig.json under ${rootDir}. Add one or pass a path that contains it.`,
@@ -47,7 +53,9 @@ export function createProgramForDirectory(rootDir: string): ts.Program {
   );
 
   if (parsed.errors.length > 0) {
-    const msg = parsed.errors.map((d) => ts.formatDiagnostic(d, formatHost)).join("\n");
+    const msg = parsed.errors
+      .map((d) => ts.formatDiagnostic(d, formatHost))
+      .join("\n");
     throw new Error(msg);
   }
 
@@ -55,7 +63,10 @@ export function createProgramForDirectory(rootDir: string): ts.Program {
     rootNames: parsed.fileNames,
     options: parsed.options,
   };
-  if (parsed.projectReferences !== undefined && parsed.projectReferences.length > 0) {
+  if (
+    parsed.projectReferences !== undefined &&
+    parsed.projectReferences.length > 0
+  ) {
     programOptions.projectReferences = parsed.projectReferences;
   }
   return ts.createProgram(programOptions);
@@ -70,7 +81,10 @@ const formatHost: ts.FormatDiagnosticsHost = {
 /**
  * Strip root prefix and normalize to project-relative POSIX paths.
  */
-export function toProjectRelativePath(absoluteFile: string, rootDir: string): string {
+export function toProjectRelativePath(
+  absoluteFile: string,
+  rootDir: string,
+): string {
   const rel = path.relative(rootDir, absoluteFile);
   if (rel.startsWith("..")) {
     return toPosix(absoluteFile);
@@ -79,7 +93,10 @@ export function toProjectRelativePath(absoluteFile: string, rootDir: string): st
 }
 
 export function isFromNodeModulesOrDts(sf: ts.SourceFile): boolean {
-  return sf.isDeclarationFile || sf.fileName.includes(`${path.sep}node_modules${path.sep}`);
+  return (
+    sf.isDeclarationFile ||
+    sf.fileName.includes(`${path.sep}node_modules${path.sep}`)
+  );
 }
 
 /**

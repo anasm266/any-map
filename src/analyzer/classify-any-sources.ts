@@ -23,7 +23,10 @@ function getDisplayName(decl: ts.Node): string {
   if (name && ts.isIdentifier(name)) return name.text;
   if (name && ts.isPrivateIdentifier(name)) return name.text;
   if (ts.isVariableDeclaration(decl) && decl.initializer) {
-    if (ts.isArrowFunction(decl.initializer) || ts.isFunctionExpression(decl.initializer)) {
+    if (
+      ts.isArrowFunction(decl.initializer) ||
+      ts.isFunctionExpression(decl.initializer)
+    ) {
       return "(anonymous)";
     }
   }
@@ -39,13 +42,18 @@ function locationForReport(decl: ts.Node): ts.Node {
   return decl;
 }
 
-function positionOfNode(node: ts.Node, sf: ts.SourceFile): { line: number; column: number } {
+function positionOfNode(
+  node: ts.Node,
+  sf: ts.SourceFile,
+): { line: number; column: number } {
   const start = node.getStart(sf, false);
   const { line, character } = sf.getLineAndCharacterOfPosition(start);
   return { line: line + 1, column: character + 1 };
 }
 
-function findAncestorFunctionLike(node: ts.Node): ts.FunctionLikeDeclaration | undefined {
+function findAncestorFunctionLike(
+  node: ts.Node,
+): ts.FunctionLikeDeclaration | undefined {
   let n: ts.Node | undefined = node.parent;
   while (n) {
     if (
@@ -71,7 +79,9 @@ function reportNodeForFunctionLike(fn: ts.FunctionLikeDeclaration): ts.Node {
   return fn;
 }
 
-function resolveAssertionLikeReportTarget(node: ts.AssertionExpression | ts.SatisfiesExpression): {
+function resolveAssertionLikeReportTarget(
+  node: ts.AssertionExpression | ts.SatisfiesExpression,
+): {
   report: ts.Node;
   name: string;
 } {
@@ -157,7 +167,11 @@ function findUntypedImportSources(
   };
 
   const visit = (node: ts.Node): void => {
-    if (ts.isImportDeclaration(node) && node.importClause && !node.importClause.isTypeOnly) {
+    if (
+      ts.isImportDeclaration(node) &&
+      node.importClause &&
+      !node.importClause.isTypeOnly
+    ) {
       const clause = node.importClause;
       if (clause.name) {
         checkBinding(clause.name);
@@ -342,7 +356,10 @@ function sortSources(a: AnySource, b: AnySource): number {
 /**
  * All six v1 source kinds (PLAN §4), merged and de-duplicated by report location + kind.
  */
-export function findAnySources(program: ts.Program, projectRootAbs: string): AnySource[] {
+export function findAnySources(
+  program: ts.Program,
+  projectRootAbs: string,
+): AnySource[] {
   const checker = program.getTypeChecker();
   const buckets: AnySource[] = [
     ...findExplicitAnySources(program, projectRootAbs),

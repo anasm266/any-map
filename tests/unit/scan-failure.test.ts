@@ -16,7 +16,15 @@ function minimalSummary(overrides: Partial<ScanSummary>): ScanSummary {
 describe("evaluateScanFailure", () => {
   it("fails when source count exceeds fail-above", () => {
     const s = minimalSummary({
-      sources: [{ filePath: "a.ts", line: 1, column: 1, name: "x", sourceKind: "explicit-any" }],
+      sources: [
+        {
+          filePath: "a.ts",
+          line: 1,
+          column: 1,
+          name: "x",
+          sourceKind: "explicit-any",
+        },
+      ],
     });
     expect(evaluateScanFailure(s, { failAbove: 0 }).failed).toBe(true);
     expect(evaluateScanFailure(s, { failAbove: 1 }).failed).toBe(false);
