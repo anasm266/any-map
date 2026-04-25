@@ -12,9 +12,7 @@ A single `any` in a utility can propagate through assignments, destructuring, an
 
 ## Status
 
-**Published on npm:** [`any-map@0.1.0`](https://www.npmjs.com/package/any-map). Roadmap and algorithm details: [PLAN.md](./PLAN.md).
-
-**Build / ship (reference):** The full m1–m6 stack (classifier, intra-module graph, propagation, set-cover, trace, scan formats, GitHub Action) landed in a single short session. Treat that as velocity on **integration and shipping**, not as a claim that every edge case in a mature codebase is handled.
+**Published on npm:** [`any-map`](https://www.npmjs.com/package/any-map) (see `package.json` for current version). Algorithm details and design notes: [PLAN.md](./PLAN.md).
 
 ## What it does
 
@@ -100,17 +98,9 @@ Details: [PLAN.md §5](./PLAN.md#5-algorithms).
 | `type-coverage`                      | % of typed identifiers                | —                                    |
 | **any-map**                          | Source → infection graph, blast, rank | Propagation + greedy order + `trace` |
 
-## Roadmap
+## Changelog and design
 
-- [x] **m2:** all six `any` source kinds; `any-map scan` with `cli-table3` (or `--json`); fixtures + recall tests.
-- [x] **m3:** intra-module type-flow graph; `any-map scan --dump-graph` (`buildSerializedGraph` / `GraphBuilder`).
-- [x] **m4:** propagation + blast-radius ranking; `scan --top N`; JSON `sourcesRankedByBlast`.
-- [x] **m5:** greedy set-cover table + JSON; `any-map trace`; `scripts/overlap-analysis.mjs`.
-- [x] **m6:** `--format table|json|dot`, `any-map graph`, filters, fail thresholds, composite GitHub Action.
-- [x] v0.1: npm publish; TypeORM + Knex benchmark table in this README.
-- [ ] **v1.0:** launch post (lead with real benchmark nuance), more benchmark repos, GitHub **Release** + tag aligned with npm, green release CI (see below), optional README screenshot.
-
-[CHANGELOG](./CHANGELOG.md) · detailed design history: [PLAN.md](./PLAN.md).
+[CHANGELOG.md](./CHANGELOG.md) · [PLAN.md](./PLAN.md) (algorithms, scope, test strategy).
 
 ## Scope boundaries (v1 non-goals)
 
@@ -118,12 +108,12 @@ Details: [PLAN.md §5](./PLAN.md#5-algorithms).
 - Cross-module `param ← arg` uses **declared** parameter types, not interprocedural dataflow.
 - No auto-fix, no LSP, no git history — see [PLAN.md §9](./PLAN.md#9-scope-boundaries-non-goals-for-v1).
 
-**Interview sketch (v1.1+):** build an export/callsite index, then for each import of a project function, connect argument expressions to parameters when types line up (overloads and generics need care).
+**Future direction (post–v1 scope):** an export/callsite index could connect argument expressions to parameters for cross-module flow when types align (overloads and generics need care).
 
 ## Maintainer / release notes
 
 - **NPM on CI:** [`.github/workflows/release.yml`](.github/workflows/release.yml) needs an [`NPM_TOKEN`](https://docs.npmjs.com/trusted-publishers) repository secret, or the workflow fails on push. Local publish still works.
-- **Version parity:** after publishing, tag the commit: `git tag v0.1.0 <sha> && git push --tags`, then [create a GitHub Release](https://github.com/anasm266/any-map/releases).
+- **Releases:** tag and GitHub Release should match the version published to npm (see the release workflow).
 
 ## Development
 
@@ -138,4 +128,4 @@ pnpm lint
 
 ## License
 
-[MIT](./LICENSE) © Anas M.
+[MIT](./LICENSE)

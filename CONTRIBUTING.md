@@ -28,9 +28,9 @@ pnpm format      # prettier
 
 ```
 src/
-  analyzer/     # classifier (m2), later graph + propagator + ranker
+  analyzer/     # classifier, graph builder, propagator, ranker
   commands/     # scan, trace, graph CLI commands
-  formatters/   # (m6) dedicated table/json/dot helpers if split from commands
+  formatters/   # optional: dedicated table/json/dot helpers if split from commands
   cli.ts        # CLI entry
   index.ts      # library entry
 tests/
@@ -42,9 +42,9 @@ benchmarks/     # perf + recall on real OSS repos
 
 ## Commit conventions
 
-Conventional Commits, with milestone tags matching [PLAN.md](./PLAN.md):
+Conventional Commits (optional scope for area), for example:
 
-- `feat(m3): intra-module edge extraction`
+- `feat(graph): intra-module edge extraction`
 - `fix(classify): guard against error intrinsic false-positives`
 - `test(fixtures): add set-cover-overlap fixture`
 - `docs: update benchmark numbers`
