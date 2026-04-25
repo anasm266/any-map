@@ -1,30 +1,21 @@
-# any-map — Detailed Build Plan
+# any-map — Detailed build plan
 
-> **Status:** Living document. **0.1.0** is on npm; milestones **m2–m6** are implemented (see [CHANGELOG](./CHANGELOG.md)). Remaining items are v1.0 polish and criteria in §11.
-> **Owner:** @anasm266
+> **Status:** Living document. The CLI, library API, analyzer pipeline, and composite GitHub Action described here are implemented; see [CHANGELOG](./CHANGELOG.md) for version history. §11 lists remaining **v1.0** criteria.
 
 ## 0. Summary
 
 A CLI tool that treats a TypeScript project as a directed graph of type-flow relationships, classifies every `any` source, propagates "infection" forward through the graph, and ranks sources by blast radius + greedy set-cover so users know which few fixes restore the most type safety.
 
-**Shipped today (0.1.0):**
+**Current package:**
 
 - **`any-map` on npm** — CLI binary plus programmatic API from the **same** package (`import { classifyScan, … } from "any-map"`). There is no separate `any-map/core` package or export path.
-- **Reusable GitHub Action** — [`.github/actions/any-map-scan`](./.github/actions/any-map-scan/action.yml) in **this** repository (not a separate `any-map-action` repo).
-
-**Still open for v1.0:**
-
-- Broader benchmark coverage, published blog post (_"Treating TypeScript's `any` as a graph reachability problem"_ — [draft](./docs/treating-typescript-any-as-graph-reachability.md)), and §11 checklist completion.
+- **Reusable GitHub Action** — [`.github/actions/any-map-scan`](./.github/actions/any-map-scan/action.yml) in this repository.
 
 ---
 
-## 1. Why this plan exists
+## 1. Purpose of this document
 
-I've shipped comparable integration projects (typing-race) in days. any-map is a different shape of work: compiler-internals-heavy, edge-case-unbounded, 30-40% dead-reckoning before anything is visible end-to-end. This plan exists to:
-
-1. Force skeleton-first development so I always have a demoable binary.
-2. Pre-commit to scope boundaries before hitting them.
-3. Name the danger zones per week so I recognize when I'm in one.
+This file records architecture, algorithms, scope boundaries, and test/release expectations so behavior stays consistent across contributors and releases.
 
 ---
 
@@ -218,7 +209,7 @@ while remaining is not empty:
 
 Guaranteed `(1 - 1/e) ≈ 63%` approximation of optimal for the set-cover objective. The "fix these 3 to remove 80%" line uses this ranking cumulatively.
 
-**Measurement decision (week 3):** compute set-cover divergence from blast-radius ranking on fixture + benchmark repos. If median overlap coefficient between source-infection sets is <0.15, set-cover collapses to blast-ranking and we surface both numbers but lead with blast.
+**Overlap heuristic:** On fixture + benchmark repos, if the median overlap coefficient between source–infection sets is <0.15, greedy set-cover ordering is close to blast-radius ordering; still surface both rankings, but interpret “fix order” with that in mind.
 
 ### 5.5 Trace
 
@@ -240,103 +231,9 @@ No graphviz deps; emit raw string and let the user pipe through `dot -Tsvg`.
 
 ---
 
-## 6. Milestones (week-by-week)
+## 6. Implementation history
 
-Each milestone ends with a commit tagged `m{N}` and a working binary. If week ends without a working binary, something's wrong.
-
-### Week 1 — m0–m1: Skeleton + single source kind
-
-**Deliverables:**
-
-- `pnpm build` produces `dist/cli.js` that runs.
-- `npx any-map scan fixtures/smoke/` prints one hardcoded row.
-- `m1`: classifier detects `explicit-any` only. No edges, no propagation. Output: "Found N explicit-any sources in M files" + flat list.
-- Published to npm as `0.0.1-alpha`.
-
-**Danger:** sinking hours into ts-morph vs raw compiler API choice. Decision: raw TS compiler API from day 1, ts-morph only for test fixture setup.
-
-**Git milestones:** `feat(m0): scaffold CLI + analyzer shell`, `feat(m1): explicit-any detection`.
-
-### Week 2 — m2: All source kinds classified
-
-**Deliverables:**
-
-- All 6 `SourceKind`s implemented: explicit-any, as-any, untyped-import, untyped-return, catch-binding, implicit-param.
-- `tests/fixtures/` has one labeled fixture per kind (see §7).
-- `scan` outputs a table (cli-table3) of sources, no blast yet, sorted by file.
-- Integration test against `fixtures/` passes ≥95% labeled recall.
-- Published `0.0.2`.
-
-**Danger:** untyped-import detection is fuzzy. Narrow v1 definition to "resolved import binding has `type.flags & TypeFlags.Any`" — if the lib ships loose types, we'll catch them; if it ships tight types, we won't falsely flag.
-
-**Git milestones:** `feat(m2): all source kinds classified + fixtures`.
-
-### Week 3 — m3: Graph construction
-
-**Deliverables:**
-
-- Edge extraction for all constructs in §5.2 table (intra-module only).
-- `graph.ts` data structure + serialization.
-- Debug dump: `any-map scan --dump-graph` writes a JSON adjacency list.
-- Unit tests verify 10+ edge extraction cases.
-- Published `0.1.0`.
-
-**Danger zone (highest of the project):** the edge-extraction visitor is where the unknown-unknowns live. Re-exports, barrel files, `typeof` imports, namespace re-exports, type-only imports. Write the visitor to **log-and-skip** unknown node kinds rather than crash. Keep a counter: "skipped N nodes of K unique kinds." Triage after week 3.
-
-**Git milestones:** `feat(m3): graph construction (intra-module)`.
-
-### Week 4 — m4: Propagation + blast radius
-
-**Deliverables:**
-
-- Forward BFS propagation working; `AnyNode.infectedBy` populated.
-- `scan` output sorted by blast radius descending.
-- `--top N` flag.
-- Table shows: rank, file:line, source kind, blast count.
-- Performance: runs on Express in <5s, on 10k-file project in <30s.
-- Published `0.2.0`.
-
-**Danger:** memory. 10k nodes × ~500 sources in infectedBy sets = ~5M set entries = OK. 100k nodes × 2k sources = 200M → not OK. Switch to bitset representation (Uint32Array indexed by sourceIdx) if node count exceeds a threshold.
-
-**Git milestones:** `feat(m4): infection propagation + blast ranking`.
-
-### Week 5 — m5: Set cover + trace
-
-**Deliverables:**
-
-- Greedy set-cover implementation; cumulative coverage % in scan output.
-- `any-map trace <file>:<line>:<col>` works; prints path from target back to each contributing source with edge reasons.
-- Overlap analysis: one-off script that measures set-cover benefit on real benchmarks (Express, Chalk, Knex, a Next.js starter).
-- Blog post draft.
-- Published `0.3.0`.
-
-**Danger:** if measurement shows set-cover collapses to blast ranking (overlap <0.15 median), demote set-cover from the headline. Keep the line but lead with blast radius.
-
-**Git milestones:** `feat(m5): set-cover ranking + trace command`.
-
-### Week 6 — m6: Formats + filters + CI integration
-
-**Deliverables:**
-
-- `--format table|json|dot`.
-- `any-map graph [--output out.dot]`.
-- `--source-kinds`, `--ignore`, `--top`, `--fail-above N`, `--fail-coverage X%` flags.
-- Composite reusable action in this repo ([`.github/actions/any-map-scan`](./.github/actions/any-map-scan/action.yml)); optional PR-comment formatting later.
-- Benchmark numbers in main README (table: repo, files, sources, infected %, top-3 coverage %).
-- Published `0.4.0` (RC).
-
-**Git milestones:** `feat(m6): full CLI surface + GH Action + benchmarks`.
-
-### Week 7 — m7: Polish + release
-
-**Deliverables:**
-
-- Docs site (consider just a rich README + GitHub Pages; avoid Docusaurus unless we need it).
-- Cross-platform testing (macOS, Ubuntu, Windows) via CI matrix.
-- Final README pass: elevator pitch, output example screenshot, install, usage, prior-art-and-differences, FAQ.
-- Blog post published (dev.to + personal site).
-- HN / r/typescript / r/programming launch.
-- Version `1.0.0`.
+Incremental delivery (classifier → graph → propagation → ranking → trace → formats, filters, CI) is summarized in [CHANGELOG.md](./CHANGELOG.md). This section is intentionally brief; the subsystems above are the source of truth.
 
 ---
 
@@ -387,7 +284,7 @@ Benchmark output: file count, symbol count, any sources found, infected count, t
 - `release.yml` workflow:
   1. On push to `main`, if pending changesets → open "Version Packages" PR.
   2. On merge of that PR → publish to npm with `NPM_TOKEN` secret.
-- Branch protection on `main`: require CI green + 1 review (even if solo, self-review via PR enforces hygiene).
+- Branch protection on `main`: require CI green and review policy as configured for the repo.
 - CI matrix: Node 20, 22, 24 × ubuntu-latest. (Optionally add macos-latest + windows-latest on tagged releases.)
 - Semver commitment:
   - `0.x.y` → breaking changes allowed in minor bumps; clear warnings in release notes.
@@ -421,11 +318,11 @@ v1.1+ backlog (do not touch until v1 ships):
 
 | Risk                                  | Likelihood | Mitigation                                                                                                                        |
 | ------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Set-cover collapses to blast ranking  | Medium     | Measure in week 5; if collapsed, demote from headline, keep as secondary metric.                                                  |
+| Set-cover collapses to blast ranking  | Medium     | If overlap metrics show collapse, treat set-cover as a secondary lens; keep blast ranking prominent.                              |
 | getTypeAtLocation spurious any        | High       | Guard against `type.intrinsicName === "error"`; add regression test per observed false-positive.                                  |
 | Perf blows up on 50k+ symbol repos    | Medium     | Switch infectedBy to bitset; add `--max-files` escape hatch.                                                                      |
 | ts-morph version pin drift vs user TS | Medium     | Declare peer dep range; test matrix against TS 5.8 / 5.9 / 6.0.                                                                   |
-| No adoption post-launch               | High       | Blog post + benchmark screenshots + concrete "fix these 3" quotable line; prior-art section in README to sharpen differentiation. |
+| Low visibility after release          | Medium     | Clear README benchmarks, prior-art comparison, and actionable CLI output.                                                          |
 | Scope creep into v1.1 items           | High       | This file. Re-read §9 before adding any feature.                                                                                  |
 
 ---
@@ -442,7 +339,5 @@ v1.1+ backlog (do not touch until v1 ships):
 - [x] Fixture recall tests (`tests/eval/fixtures-recall.test.ts`); numeric ≥95% / ≥90% targets remain goals, not hard gates.
 - [ ] Benchmark table in README with **≥4** real TS-native repos (currently 2 + smoke fixture).
 - [x] Reusable GitHub Action published **in this repo** (`.github/actions/any-map-scan`).
-- [ ] Blog post published (draft: [docs/treating-typescript-any-as-graph-reachability.md](./docs/treating-typescript-any-as-graph-reachability.md)).
-- [ ] npm adoption signal (e.g. downloads / issues) — soft.
 
 When remaining items are satisfied: tag **`v1.0.0`**.
