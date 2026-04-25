@@ -316,14 +316,14 @@ v1.1+ backlog (do not touch until v1 ships):
 
 ## 10. Risk register (update as hit)
 
-| Risk                                  | Likelihood | Mitigation                                                                                                                        |
-| ------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Set-cover collapses to blast ranking  | Medium     | If overlap metrics show collapse, treat set-cover as a secondary lens; keep blast ranking prominent.                              |
-| getTypeAtLocation spurious any        | High       | Guard against `type.intrinsicName === "error"`; add regression test per observed false-positive.                                  |
-| Perf blows up on 50k+ symbol repos    | Medium     | Switch infectedBy to bitset; add `--max-files` escape hatch.                                                                      |
-| ts-morph version pin drift vs user TS | Medium     | Declare peer dep range; test matrix against TS 5.8 / 5.9 / 6.0.                                                                   |
-| Low visibility after release          | Medium     | Clear README benchmarks, prior-art comparison, and actionable CLI output.                                                          |
-| Scope creep into v1.1 items           | High       | This file. Re-read §9 before adding any feature.                                                                                  |
+| Risk                                  | Likelihood | Mitigation                                                                                           |
+| ------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------- |
+| Set-cover collapses to blast ranking  | Medium     | If overlap metrics show collapse, treat set-cover as a secondary lens; keep blast ranking prominent. |
+| getTypeAtLocation spurious any        | High       | Guard against `type.intrinsicName === "error"`; add regression test per observed false-positive.     |
+| Perf blows up on 50k+ symbol repos    | Medium     | Switch infectedBy to bitset; add `--max-files` escape hatch.                                         |
+| ts-morph version pin drift vs user TS | Medium     | Declare peer dep range; test matrix against TS 5.8 / 5.9 / 6.0.                                      |
+| Low visibility after release          | Medium     | Clear README benchmarks, prior-art comparison, and actionable CLI output.                            |
+| Scope creep into v1.1 items           | High       | This file. Re-read §9 before adding any feature.                                                     |
 
 ---
 
