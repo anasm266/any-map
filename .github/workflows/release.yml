@@ -26,7 +26,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: pnpm
           registry-url: "https://registry.npmjs.org"
 
@@ -34,10 +34,7 @@ jobs:
 
       - run: pnpm build
 
-      # Requires NPM_TOKEN repo secret for publish / full changesets automation.
-      # Without it, skip so pushes to main stay green until you add https://github.com/anasm266/any-map/settings/secrets/actions
       - name: create release PR or publish
-        if: ${{ secrets.NPM_TOKEN != '' }}
         uses: changesets/action@v1
         with:
           publish: pnpm ci:publish
@@ -46,11 +43,3 @@ jobs:
           title: "chore: release"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_PROVENANCE: "true"
-
-      - name: Release skipped (no NPM_TOKEN)
-        if: ${{ secrets.NPM_TOKEN == '' }}
-        run: |
-          echo "NPM_TOKEN is not configured; skipping changesets publish."
-          echo "CI still validated the build above. Add NPM_TOKEN when you are ready to publish to npm."
