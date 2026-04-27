@@ -1,6 +1,6 @@
 # any-map — Detailed build plan
 
-> **Status:** Living document. The CLI, library API, analyzer pipeline, and composite GitHub Action described here are implemented; see [CHANGELOG](./CHANGELOG.md) for version history. §11 tracks the **v1.0** release criteria.
+> **Status:** Living document. The CLI, library API, analyzer pipeline, and composite GitHub Action described here are implemented; see [CHANGELOG](./CHANGELOG.md) for version history. The v1.0 criteria in §11 are complete, and the current `main` branch also includes branch-diff reporting via `any-map diff <base> <head>`.
 
 ## 0. Summary
 
@@ -283,7 +283,7 @@ Benchmark output: file count, symbol count, any sources found, infected count, t
 - `.changeset/` for version bumps. Each feature PR includes a changeset.
 - `release.yml` workflow:
   1. On push to `main`, if pending changesets → open "Version Packages" PR.
-  2. On merge of that PR → publish to npm with `NPM_TOKEN` secret.
+  2. On merge of that PR → publish to npm via trusted publishing (OIDC).
 - Branch protection on `main`: require CI green and review policy as configured for the repo.
 - CI matrix: Node 20, 22, 24 × ubuntu-latest. (Optionally add macos-latest + windows-latest on tagged releases.)
 - Semver commitment:
@@ -303,14 +303,13 @@ Copy-paste from spec, reaffirmed:
 5. No non-TS languages.
 6. No historical trend analysis.
 
-v1.1+ backlog (do not touch until v1 ships):
+Post-v1 backlog:
 
-- GitHub Action with PR-diff mode.
+- GitHub Action PR annotations / richer review UX on top of `diff` mode.
 - `any-map history --since 6mo` git-walk.
 - VS Code codelens.
 - `--fix` for deterministic cases (catch→unknown, JSON.parse→zod stub).
 - Full cross-module param→arg.
-- `any-map diff main HEAD`.
 
 ---
 
@@ -340,4 +339,4 @@ v1.1+ backlog (do not touch until v1 ships):
 - [x] Benchmark table in README with **≥4** real TS-native repos (`zod`, `zustand`, `immer`, `ky`).
 - [x] Reusable GitHub Action published **in this repo** (`.github/actions/any-map-scan`).
 
-All v1.0 criteria above are now satisfied; the next release tag should be **`v1.0.0`**.
+All v1.0 criteria above are satisfied. The released line is now `1.2.x`; the next minor release from `main` adds `any-map diff <base> <head>`.

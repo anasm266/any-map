@@ -17,15 +17,18 @@ A single `any` in a utility can propagate through assignments, destructuring, an
 
 **Current release:** `1.2.0` extends propagation through imported value bindings, property/index reads, and plain assignment statements, including direct intra-project call arguments.
 
+**On `main`:** `any-map diff <base> <head>` compares branch-introduced `any` deltas with merge-base semantics and reports added/removed sources plus blast-radius changes for touched files.
+
 **Recent usage:** `235` npm downloads from `2026-03-27` through `2026-04-25`.
 
 ## What it does
 
-| Command                      | Purpose                                                                                |
-| ---------------------------- | -------------------------------------------------------------------------------------- |
-| `any-map scan [path]`        | Analyze a TS project; table / JSON / DOT; filters + CI thresholds.                     |
-| `any-map trace <loc> [path]` | Print type-flow paths from each `any` source to the symbol at `loc` (`file:line:col`). |
-| `any-map graph [path]`       | Emit the project type-flow graph as Graphviz DOT (`-o out.dot` or stdout).             |
+| Command                             | Purpose                                                                                |
+| ----------------------------------- | -------------------------------------------------------------------------------------- |
+| `any-map diff <base> <head> [path]` | Compare branch-introduced `any` deltas for touched files (table / JSON).               |
+| `any-map scan [path]`               | Analyze a TS project; table / JSON / DOT; filters + CI thresholds.                     |
+| `any-map trace <loc> [path]`        | Print type-flow paths from each `any` source to the symbol at `loc` (`file:line:col`). |
+| `any-map graph [path]`              | Emit the project type-flow graph as Graphviz DOT (`-o out.dot` or stdout).             |
 
 `any-map scan`: `--format table|json|dot` (or legacy `--json`), `--dump-graph` (JSON graph snapshot), `--top N` (limits **both** the greedy fix-order table and the blast-ranked table, and the matching JSON arrays; `--fail-coverage` still uses the full greedy run), `--source-kinds`, `--ignore` (comma-separated picomatch globs), `--fail-above N`, `--fail-coverage P` (cumulative % from the greedy run must be ≥ P — see [PLAN.md](./PLAN.md) for edge cases). CI: [.github/actions/any-map-scan/action.yml](.github/actions/any-map-scan/action.yml) (`npx any-map@… scan . ${{ inputs.args }}`).
 
@@ -51,6 +54,8 @@ Inference-only kinds (`implicit-param`, `untyped-return`, `untyped-import`, `cat
 **Implication:** “Fixing these 3 any sources would restore type safety for most of the repo” is sometimes true and often false. `any-map` is most useful when it shows you that the long tail is real, not when it flatters you with a single magic percentage. For a larger, more entangled stress-test, the TypeORM sample below remains a good illustration of the same point.
 
 `any-map trace src/foo.ts:12:5` prints forward hops (`reason` per edge) from each source to the traced binding; use `--json` for machine-readable `TraceReport`.
+
+`any-map diff main HEAD --format table` computes the merge-base of `main` and `HEAD`, runs full scans for both revisions, and reports only the `any` deltas for touched files by default. If the diff touches `tsconfig*.json`, `package.json`, lockfiles, or `.d.ts` files inside the selected scan root, it automatically falls back to a full-project delta.
 
 ### Sample CLI output (TypeORM, `--top 10`)
 
@@ -122,6 +127,7 @@ Details: [PLAN.md §5](./PLAN.md#5-algorithms).
 ## Maintainer / release notes
 
 - **NPM on CI:** [`.github/workflows/release.yml`](.github/workflows/release.yml) publishes through npm trusted publishing (OIDC) from GitHub Actions; no long-lived `NPM_TOKEN` is required. Keep the npm trusted publisher config aligned with this repo and workflow filename.
+- **Reusable action:** [`.github/actions/any-map-scan`](.github/actions/any-map-scan/action.yml) now supports both `scan` and `diff`. Use `command: diff`, `base-ref`, `head-ref`, and optional `path` / `args` to review branch deltas in PR workflows.
 - **Releases:** tag and GitHub Release should match the version published to npm (see the release workflow).
 
 ## Development

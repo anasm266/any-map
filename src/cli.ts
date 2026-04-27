@@ -4,6 +4,7 @@ import {
   parseIgnoreGlobsList,
   parseSourceKindsList,
 } from "./analyzer/filter-sources.js";
+import { runDiffCommand, type DiffCliFormat } from "./commands/diff.js";
 import { runGraphCommand } from "./commands/graph.js";
 import { runScanCommand, type ScanCliFormat } from "./commands/scan.js";
 import { runTraceCommand } from "./commands/trace.js";
@@ -54,6 +55,23 @@ function scanFormatFromOpts(opts: {
       opts.format !== "dot"
     ) {
       console.error("any-map scan: --format must be table, json, or dot");
+      process.exitCode = 1;
+      return undefined;
+    }
+    return opts.format;
+  }
+  if (opts.json === true) return "json";
+  return "table";
+}
+
+function diffFormatFromOpts(opts: {
+  format?: string;
+  json?: boolean;
+}): DiffCliFormat | undefined {
+  if (process.exitCode) return undefined;
+  if (opts.format !== undefined) {
+    if (opts.format !== "table" && opts.format !== "json") {
+      console.error("any-map diff: --format must be table or json");
       process.exitCode = 1;
       return undefined;
     }
@@ -154,6 +172,76 @@ program
       }
 
       await runScanCommand(path, flags);
+    },
+  );
+
+program
+  .command("diff")
+  .description(
+    "Compare branch-introduced `any` deltas between two refs using merge-base semantics.",
+  )
+  .argument("<base>", "Base ref (merge-base is computed against head)")
+  .argument("<head>", "Head ref to analyze")
+  .argument("[path]", "Project file, directory, or tsconfig root", ".")
+  .option("--format <mode>", "Output: table or json")
+  .option("--json", "Same as --format json", false)
+  .option(
+    "--top <n>",
+    "Limit rows in added/removed/blast-changed sections and in JSON delta arrays",
+  )
+  .option(
+    "--source-kinds <list>",
+    "Comma-separated kinds: explicit-any, as-any, untyped-import, untyped-return, catch-binding, implicit-param",
+  )
+  .option(
+    "--ignore <globs>",
+    "Comma-separated picomatch globs; matching files excluded from sources",
+  )
+  .action(
+    async (
+      baseRef: string,
+      headRef: string,
+      scanPath: string | undefined,
+      opts: {
+        format?: string;
+        json?: boolean;
+        top?: string;
+        sourceKinds?: string;
+        ignore?: string;
+      },
+    ) => {
+      const format = diffFormatFromOpts(opts);
+      if (format === undefined) return;
+
+      const flags: Parameters<typeof runDiffCommand>[3] = { format };
+
+      if (opts.json === true) flags.json = true;
+
+      if (opts.top !== undefined) {
+        const n = Number.parseInt(opts.top, 10);
+        if (!Number.isInteger(n) || n < 1) {
+          console.error("any-map diff: --top must be a positive integer");
+          process.exitCode = 1;
+          return;
+        }
+        flags.top = n;
+      }
+
+      if (opts.sourceKinds) {
+        try {
+          flags.sourceKinds = parseSourceKindsList(opts.sourceKinds);
+        } catch (e) {
+          console.error(e instanceof Error ? e.message : e);
+          process.exitCode = 1;
+          return;
+        }
+      }
+
+      if (opts.ignore) {
+        flags.ignoreGlobs = parseIgnoreGlobsList(opts.ignore);
+      }
+
+      await runDiffCommand(baseRef, headRef, scanPath, flags);
     },
   );
 

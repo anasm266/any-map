@@ -1,5 +1,7 @@
 export type {
   AnySource,
+  BlastChangedSource,
+  DiffSummary,
   GreedyCoverPick,
   ScanSummary,
   SourceKind,
@@ -11,11 +13,17 @@ export {
   classifyScan,
   runFullScan,
 } from "./analyzer/run-scan.js";
+export {
+  applyTopToDiffSummary,
+  diffScan,
+  summarizeDiffTotals,
+} from "./analyzer/diff-scan.js";
 export type {
   FullScanResult,
   ScanOptions,
   ScanResult,
 } from "./analyzer/run-scan.js";
+export type { DiffScanOptions } from "./analyzer/diff-scan.js";
 export {
   filterSources,
   parseIgnoreGlobsList,
