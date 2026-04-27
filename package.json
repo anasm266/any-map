@@ -1,6 +1,6 @@
 {
   "name": "any-map",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Static flow analysis for TypeScript any types. Finds the few sources responsible for most of your type erosion.",
   "keywords": [
     "typescript",
