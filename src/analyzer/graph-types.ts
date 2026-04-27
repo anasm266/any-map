@@ -5,13 +5,15 @@ export type GraphNodeKind =
   | "parameter"
   | "return"
   | "property"
-  | "import-binding";
+  | "import-binding"
+  | "export-binding";
 
 export type EdgeReason =
   | "assignment"
   | "call-return"
   | "destructure"
   | "import"
+  | "re-export"
   | "property-access"
   | "parameter-binding"
   | "class-member"

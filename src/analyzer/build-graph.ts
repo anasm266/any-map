@@ -40,6 +40,21 @@ function getEnclosingFunctionLike(
   return undefined;
 }
 
+function isCallableFunctionLike(
+  node: ts.Node,
+): node is
+  | ts.FunctionDeclaration
+  | ts.FunctionExpression
+  | ts.ArrowFunction
+  | ts.MethodDeclaration {
+  return (
+    ts.isFunctionDeclaration(node) ||
+    ts.isFunctionExpression(node) ||
+    ts.isArrowFunction(node) ||
+    ts.isMethodDeclaration(node)
+  );
+}
+
 function propertyNameText(name: ts.PropertyName): string | undefined {
   if (ts.isIdentifier(name) || ts.isPrivateIdentifier(name)) return name.text;
   if (ts.isStringLiteralLike(name) || ts.isNumericLiteral(name)) {
@@ -54,6 +69,7 @@ export class GraphBuilder {
   private readonly edgeList: GraphEdge[] = [];
   /** Type flows `from` → `to` (PLAN §5.2). */
   private readonly outgoing = new Map<string, GraphEdge[]>();
+  private readonly exportChainCache = new Map<string, string | undefined>();
 
   constructor(
     private readonly program: ts.Program,
@@ -258,6 +274,41 @@ export class GraphBuilder {
     return nid;
   }
 
+  private ensureExportBinding(
+    exportNameNode: ts.Node,
+    exportNameText: string,
+    discriminator = "",
+  ): string | undefined {
+    const sf = exportNameNode.getSourceFile();
+    if (!this.isUserSourceFile(sf)) return undefined;
+    const filePath = this.rel(sf);
+    const start = exportNameNode.getStart(sf, false);
+    const { line, character } = sf.getLineAndCharacterOfPosition(start);
+    const line1 = line + 1;
+    const col1 = character + 1;
+    const nid = makeNodeId(
+      filePath,
+      line1,
+      col1,
+      exportNameText,
+      discriminator,
+    );
+    if (!this.nodes.has(nid)) {
+      this.nodes.set(nid, {
+        id: nid,
+        filePath,
+        line: line1,
+        column: col1,
+        name: exportNameText,
+        kind: "export-binding",
+        typeString: this.typeStringAt(exportNameNode),
+        isSource: false,
+        infectedBy: new Set(),
+      });
+    }
+    return nid;
+  }
+
   private ensureBindingElement(el: ts.BindingElement): string | undefined {
     if (!ts.isIdentifier(el.name)) return undefined;
     const sf = el.getSourceFile();
@@ -283,6 +334,170 @@ export class GraphBuilder {
       });
     }
     return id;
+  }
+
+  private symbolName(sym: ts.Symbol): string {
+    return sym.escapedName.toString();
+  }
+
+  private resolveAliasedSymbol(sym: ts.Symbol): ts.Symbol {
+    return (sym.flags & ts.SymbolFlags.Alias) !== 0
+      ? this.checker.getAliasedSymbol(sym)
+      : sym;
+  }
+
+  private moduleSymbolForSpecifier(
+    moduleSpecifier: ts.Expression | undefined,
+  ): ts.Symbol | undefined {
+    if (!moduleSpecifier || !ts.isStringLiteral(moduleSpecifier))
+      return undefined;
+    return this.checker.getSymbolAtLocation(moduleSpecifier);
+  }
+
+  private moduleKey(moduleSym: ts.Symbol, exportName: string): string {
+    const decl = moduleSym.declarations?.[0];
+    if (decl) {
+      return `${this.rel(decl.getSourceFile())}\0${exportName}`;
+    }
+    return `${this.symbolName(moduleSym)}\0${exportName}`;
+  }
+
+  private exportedSymbolByName(
+    moduleSym: ts.Symbol,
+    exportName: string,
+  ): ts.Symbol | undefined {
+    return this.checker
+      .getExportsOfModule(moduleSym)
+      .find((sym) => this.symbolName(sym) === exportName);
+  }
+
+  private sourceFileForModuleSymbol(
+    moduleSym: ts.Symbol,
+  ): ts.SourceFile | undefined {
+    const decl = moduleSym.declarations?.[0];
+    if (!decl) return undefined;
+    const sf = decl.getSourceFile();
+    return this.isUserSourceFile(sf) ? sf : undefined;
+  }
+
+  private exportChainMatches(
+    moduleSym: ts.Symbol,
+    exportName: string,
+    target: ts.Symbol,
+  ): boolean {
+    const candidate = this.exportedSymbolByName(moduleSym, exportName);
+    if (!candidate) return false;
+    return this.resolveAliasedSymbol(candidate) === target;
+  }
+
+  private buildExportChain(
+    moduleSym: ts.Symbol,
+    exportName: string,
+    seen = new Set<string>(),
+  ): string | undefined {
+    const cacheKey = this.moduleKey(moduleSym, exportName);
+    if (this.exportChainCache.has(cacheKey)) {
+      return this.exportChainCache.get(cacheKey);
+    }
+    if (seen.has(cacheKey)) return undefined;
+    const nextSeen = new Set(seen);
+    nextSeen.add(cacheKey);
+
+    const exportSym = this.exportedSymbolByName(moduleSym, exportName);
+    if (!exportSym) {
+      this.exportChainCache.set(cacheKey, undefined);
+      return undefined;
+    }
+
+    const exportSpecifierDecl = exportSym.declarations?.find(
+      ts.isExportSpecifier,
+    );
+    if (exportSpecifierDecl) {
+      const exportId = this.ensureExportBinding(
+        exportSpecifierDecl.name,
+        exportSpecifierDecl.name.text,
+      );
+      const exportDecl = exportSpecifierDecl.parent.parent;
+      const sourceExportName =
+        exportSpecifierDecl.propertyName?.text ?? exportSpecifierDecl.name.text;
+      let upstreamId: string | undefined;
+
+      if (exportDecl.moduleSpecifier) {
+        const upstreamModule = this.moduleSymbolForSpecifier(
+          exportDecl.moduleSpecifier,
+        );
+        if (upstreamModule) {
+          upstreamId = this.buildExportChain(
+            upstreamModule,
+            sourceExportName,
+            nextSeen,
+          );
+        }
+      } else {
+        const localRef =
+          exportSpecifierDecl.propertyName ?? exportSpecifierDecl.name;
+        const localSym = this.checker.getSymbolAtLocation(localRef);
+        const localDecl =
+          localSym &&
+          this.declarationForSymbol(this.resolveAliasedSymbol(localSym));
+        if (localDecl) upstreamId = this.ensureFromValueDeclaration(localDecl);
+      }
+
+      if (upstreamId && exportId)
+        this.addEdge(upstreamId, exportId, "re-export");
+      const resolvedId = exportId ?? upstreamId;
+      this.exportChainCache.set(cacheKey, resolvedId);
+      return resolvedId;
+    }
+
+    const resolvedExportSym = this.resolveAliasedSymbol(exportSym);
+    const moduleSf = this.sourceFileForModuleSymbol(moduleSym);
+    if (moduleSf) {
+      for (const stmt of moduleSf.statements) {
+        if (
+          !ts.isExportDeclaration(stmt) ||
+          stmt.isTypeOnly ||
+          stmt.exportClause !== undefined
+        ) {
+          continue;
+        }
+        const upstreamModule = this.moduleSymbolForSpecifier(
+          stmt.moduleSpecifier,
+        );
+        if (!upstreamModule) continue;
+        if (
+          !this.exportChainMatches(
+            upstreamModule,
+            exportName,
+            resolvedExportSym,
+          )
+        ) {
+          continue;
+        }
+        const exportId = this.ensureExportBinding(
+          stmt.moduleSpecifier!,
+          exportName,
+          "star",
+        );
+        const upstreamId = this.buildExportChain(
+          upstreamModule,
+          exportName,
+          nextSeen,
+        );
+        if (upstreamId && exportId)
+          this.addEdge(upstreamId, exportId, "re-export");
+        const resolvedId = exportId ?? upstreamId;
+        this.exportChainCache.set(cacheKey, resolvedId);
+        return resolvedId;
+      }
+    }
+
+    const originDecl = this.declarationForSymbol(resolvedExportSym);
+    const resolvedId = originDecl
+      ? this.ensureFromValueDeclaration(originDecl)
+      : undefined;
+    this.exportChainCache.set(cacheKey, resolvedId);
+    return resolvedId;
   }
 
   private returnAnchor(
@@ -408,33 +623,39 @@ export class GraphBuilder {
     const modSym = this.checker.getSymbolAtLocation(node.moduleSpecifier);
     if (!modSym) return;
 
-    const locals: ts.Identifier[] = [];
     if (node.importClause.name && !node.importClause.isTypeOnly) {
-      locals.push(node.importClause.name);
+      const importId = this.ensureImportBinding(node.importClause.name);
+      const exportId = this.buildExportChain(modSym, "default");
+      if (exportId && importId) this.addEdge(exportId, importId, "import");
     }
+
     if (
       node.importClause.namedBindings &&
       ts.isNamedImports(node.importClause.namedBindings)
     ) {
       for (const el of node.importClause.namedBindings.elements) {
-        if (!el.isTypeOnly) locals.push(el.name);
+        if (el.isTypeOnly) continue;
+        const importId = this.ensureImportBinding(el.name);
+        const exportName = el.propertyName?.text ?? el.name.text;
+        const exportId = this.buildExportChain(modSym, exportName);
+        if (exportId && importId) this.addEdge(exportId, importId, "import");
       }
     } else if (
       node.importClause.namedBindings &&
       ts.isNamespaceImport(node.importClause.namedBindings)
     ) {
-      locals.push(node.importClause.namedBindings.name);
-    }
-
-    for (const local of locals) {
-      const importId = this.ensureImportBinding(local);
-      const localSym = this.checker.getSymbolAtLocation(local);
-      if (!localSym) continue;
+      const importId = this.ensureImportBinding(
+        node.importClause.namedBindings.name,
+      );
+      const localSym = this.checker.getSymbolAtLocation(
+        node.importClause.namedBindings.name,
+      );
+      if (!localSym) return;
       const aliased = this.checker.getAliasedSymbol(localSym);
       const expDecl = aliased.valueDeclaration;
-      if (!expDecl) continue;
+      if (!expDecl) return;
       const expSf = expDecl.getSourceFile();
-      if (!this.isUserSourceFile(expSf)) continue;
+      if (!this.isUserSourceFile(expSf)) return;
       const exportId = this.ensureFromValueDeclaration(expDecl);
       if (exportId && importId) this.addEdge(exportId, importId, "import");
     }
@@ -444,13 +665,7 @@ export class GraphBuilder {
     const sig = this.checker.getResolvedSignature(call);
     if (!sig) return;
     const decl = sig.getDeclaration();
-    if (
-      !decl ||
-      (!ts.isFunctionDeclaration(decl) &&
-        !ts.isMethodDeclaration(decl) &&
-        !ts.isFunctionExpression(decl) &&
-        !ts.isArrowFunction(decl))
-    ) {
+    if (!decl || !isCallableFunctionLike(decl)) {
       return;
     }
     if (!this.isUserSourceFile(decl.getSourceFile())) return;
@@ -621,21 +836,26 @@ export class GraphBuilder {
 
   applySources(sources: AnySource[]): void {
     for (const s of sources) {
-      // `untyped-return` is reported at the function/binding name, but flow to callers goes
-      // from the synthetic `return` slot (`ensureReturnNode`), not the value node for `f`.
-      const useReturnSlot = s.sourceKind === "untyped-return";
-      for (const n of this.nodes.values()) {
-        if (
+      const matches = [...this.nodes.values()].filter(
+        (n) =>
           n.filePath === s.filePath &&
           n.line === s.line &&
           n.column === s.column &&
-          n.name === s.name &&
-          (useReturnSlot ? n.kind === "return" : n.kind !== "return")
-        ) {
-          n.isSource = true;
-          n.sourceKind = s.sourceKind;
-          break;
-        }
+          n.name === s.name,
+      );
+      if (matches.length === 0) continue;
+
+      const useReturnSlot =
+        s.sourceKind === "untyped-return" ||
+        (s.sourceKind === "explicit-any" &&
+          matches.some((n) => n.kind === "return" && n.typeString === "any") &&
+          matches.some((n) => n.kind !== "return" && n.typeString !== "any"));
+      const target = useReturnSlot
+        ? matches.find((n) => n.kind === "return")
+        : matches.find((n) => n.kind !== "return");
+      if (target) {
+        target.isSource = true;
+        target.sourceKind = s.sourceKind;
       }
     }
   }

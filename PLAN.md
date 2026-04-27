@@ -170,7 +170,7 @@ Walk every `Node` once; for each construct, emit edges per the table below:
 | `return expr`           | `returnType(enclosingFn) ← expr`                                   |
 | spread `{...a}`         | `consumer ← a`                                                     |
 
-Current implementation follows direct intra-project `param ← arg` and `call-return` edges when TypeScript resolves the callee declaration across files. Full callsite-sensitive interprocedural analysis across re-export chains, dynamic dispatch, or overload/generic specialization remains post-v1 scope.
+Current implementation follows direct intra-project `param ← arg` and `call-return` edges when TypeScript resolves the callee declaration across files, and it preserves import/re-export hops for named/default/`export *` chains. Full callsite-sensitive interprocedural analysis across complex re-export chains, dynamic dispatch, or overload/generic specialization remains post-v1 scope.
 
 ### 5.3 Propagator
 
@@ -297,7 +297,7 @@ Benchmark output: file count, symbol count, any sources found, infected count, t
 Copy-paste from spec, reaffirmed:
 
 1. No full inference through generics/conditionals/distributive types. `T extends U ? any : T` treated as surface resolution at usage.
-2. No full callsite-sensitive interprocedural analysis across re-export chains, dynamic dispatch, or overload/generic specialization. Direct resolved callees are followed across project files.
+2. No full callsite-sensitive interprocedural analysis across complex re-export chains, dynamic dispatch, or overload/generic specialization. Direct resolved callees and import/re-export hops are followed across project files.
 3. No auto-fix.
 4. No LSP / editor integration.
 5. No non-TS languages.

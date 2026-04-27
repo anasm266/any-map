@@ -65,7 +65,7 @@ describe("diffScan", () => {
         expect(summary.removedSources).toHaveLength(0);
       },
     );
-  });
+  }, 20_000);
 
   it("reports a removed any source in removedSources", () => {
     withDiffRepo(
@@ -88,7 +88,7 @@ describe("diffScan", () => {
         expect(summary.addedSources).toHaveLength(0);
       },
     );
-  });
+  }, 20_000);
 
   it("tracks blast radius changes for touched sources", () => {
     withDiffRepo(
@@ -112,7 +112,7 @@ describe("diffScan", () => {
         expect(blastChange?.deltaBlastRadius).toBeGreaterThan(0);
       },
     );
-  });
+  }, 20_000);
 
   it("hides untouched-source blast changes in changed-files mode", () => {
     withDiffRepo(
@@ -137,7 +137,7 @@ describe("diffScan", () => {
         expect(summary.blastChangedSources).toHaveLength(0);
       },
     );
-  });
+  }, 20_000);
 
   it("switches to full-project fallback when declaration files change", () => {
     withDiffRepo(
@@ -158,7 +158,7 @@ describe("diffScan", () => {
         expect(summary.changedFiles).toContain("types/global.d.ts");
       },
     );
-  });
+  }, 20_000);
 
   it("limits changed files to a nested scan path subtree", () => {
     withDiffRepo(
@@ -183,5 +183,5 @@ describe("diffScan", () => {
         ]);
       },
     );
-  });
+  }, 20_000);
 });

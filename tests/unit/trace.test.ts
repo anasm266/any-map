@@ -43,4 +43,31 @@ export const downstream = src;
       },
     );
   });
+
+  it("includes re-export hops in traces across module chains", () => {
+    withTempProject(
+      {
+        "src/lib.ts": `export const leaked: any = 1;\n`,
+        "src/mid.ts": `export { leaked as renamed } from "./lib";\n`,
+        "src/index.ts": `import { renamed } from "./mid";\nexport const downstream = renamed;\n`,
+      },
+      (root) => {
+        const report = traceSymbol({
+          targetPath: root,
+          loc: "src/index.ts:2:14",
+        });
+
+        const pathToSource = report.paths.find((x) => x.name === "leaked");
+        expect(pathToSource).toBeDefined();
+        expect(
+          pathToSource?.segments.some(
+            (segment) => segment.reason === "re-export",
+          ),
+        ).toBe(true);
+        expect(
+          pathToSource?.segments.some((segment) => segment.reason === "import"),
+        ).toBe(true);
+      },
+    );
+  });
 });
