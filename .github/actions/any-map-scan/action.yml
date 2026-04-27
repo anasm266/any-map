@@ -2,14 +2,30 @@ name: any-map scan
 description: Run the any-map CLI against a TypeScript project (thresholds optional)
 
 inputs:
+  command:
+    description: CLI command to run (`scan` or `diff`)
+    required: false
+    default: "scan"
+  path:
+    description: Project file, directory, or tsconfig root
+    required: false
+    default: "."
   working-directory:
-    description: Directory containing tsconfig.json
+    description: Directory from which git / npx should run
     required: false
     default: "."
   version:
     description: npm dist-tag or version for any-map (e.g. latest)
     required: false
     default: "latest"
+  base-ref:
+    description: Base ref for `diff`
+    required: false
+    default: "HEAD"
+  head-ref:
+    description: Head ref for `diff`
+    required: false
+    default: "HEAD"
   args:
     description: Extra CLI arguments (e.g. --fail-above 10 --fail-coverage 80)
     required: false
@@ -21,4 +37,10 @@ runs:
     - name: Scan
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: npx --yes any-map@${{ inputs.version }} scan . ${{ inputs.args }}
+      run: |
+        set -euo pipefail
+        if [ "${{ inputs.command }}" = "diff" ]; then
+          npx --yes any-map@${{ inputs.version }} diff "${{ inputs.base-ref }}" "${{ inputs.head-ref }}" "${{ inputs.path }}" ${{ inputs.args }}
+        else
+          npx --yes any-map@${{ inputs.version }} scan "${{ inputs.path }}" ${{ inputs.args }}
+        fi

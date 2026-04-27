@@ -51,6 +51,31 @@ export interface ScanSummary {
   infectedNodeCount: number;
   /** Greedy set-cover order: each pick maximizes newly covered infected nodes. */
   greedyCoverPicks: GreedyCoverPick[];
-  /** `any` sources with blast radius, sorted descending (intra-module graph reachability). */
+  /** `any` sources with blast radius, sorted descending (project graph reachability). */
   sourcesRankedByBlast: SourceRanked[];
+}
+
+export interface BlastChangedSource {
+  before: SourceRanked;
+  after: SourceRanked;
+  deltaBlastRadius: number;
+}
+
+export interface DiffSummary {
+  requestedBaseRef: string;
+  requestedHeadRef: string;
+  effectiveBaseRef: string;
+  effectiveHeadRef: string;
+  compareMode: "merge-base";
+  scope: "changed-files" | "full-project-fallback";
+  /** Scan-root-relative POSIX paths included in the git delta. */
+  changedFiles: string[];
+  before: ScanSummary;
+  after: ScanSummary;
+  /** Sources present only in `after`, sorted by blast/rank from `after`. */
+  addedSources: SourceRanked[];
+  /** Sources present only in `before`, sorted by blast/rank from `before`. */
+  removedSources: SourceRanked[];
+  /** Sources present in both scans whose blast radius changed. */
+  blastChangedSources: BlastChangedSource[];
 }
