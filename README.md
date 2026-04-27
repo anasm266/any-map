@@ -29,7 +29,7 @@ A single `any` in a utility can propagate through assignments, destructuring, an
 
 `any-map scan`: `--format table|json|dot` (or legacy `--json`), `--dump-graph` (JSON graph snapshot), `--top N` (limits **both** the greedy fix-order table and the blast-ranked table, and the matching JSON arrays; `--fail-coverage` still uses the full greedy run), `--source-kinds`, `--ignore` (comma-separated picomatch globs), `--fail-above N`, `--fail-coverage P` (cumulative % from the greedy run must be ≥ P — see [PLAN.md](./PLAN.md) for edge cases). CI: [.github/actions/any-map-scan/action.yml](.github/actions/any-map-scan/action.yml) (`npx any-map@… scan . ${{ inputs.args }}`).
 
-Direct intra-project flow currently includes import bindings and resolved cross-file call edges, so `any` can propagate through chains like `export default value` -> `import x` -> `consume(x)`.
+Direct intra-project flow currently includes import bindings, property/index reads, plain assignments, and resolved cross-file call edges, so `any` can propagate through chains like `export default value` -> `import x` -> `box.payload` -> `consume(x)`.
 
 ### `allowJs` / JavaScript
 
