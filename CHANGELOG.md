@@ -1,5 +1,11 @@
 # any-map
 
+## 1.3.0
+
+### Minor Changes
+
+- a2a0b32: Add `any-map diff <base> <head>` with merge-base semantics, changed-file delta reporting, reusable GitHub Action support, and programmatic diff APIs.
+
 ## 1.2.0
 
 ### Minor Changes
