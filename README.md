@@ -13,9 +13,9 @@ A single `any` in a utility can propagate through assignments, destructuring, an
 
 ## Status
 
-**Published on npm:** [`any-map`](https://www.npmjs.com/package/any-map) (see `package.json` for current version). Algorithm details and design notes: [PLAN.md](./PLAN.md).
+**Published on npm:** [`any-map`](https://www.npmjs.com/package/any-map) `v1.1.0`. Algorithm details and design notes: [PLAN.md](./PLAN.md).
 
-**v1.0 status:** The release criteria in [PLAN.md](./PLAN.md#11-definition-of-done-v10) are complete in the repo; the next release cut should be `v1.0.0`.
+**Current release:** `1.1.0` adds graph propagation through imported value bindings, including default imports used in downstream assignments and direct intra-project call arguments.
 
 **Recent usage:** `235` npm downloads from `2026-03-27` through `2026-04-25`.
 
@@ -28,6 +28,8 @@ A single `any` in a utility can propagate through assignments, destructuring, an
 | `any-map graph [path]`       | Emit the project type-flow graph as Graphviz DOT (`-o out.dot` or stdout).             |
 
 `any-map scan`: `--format table|json|dot` (or legacy `--json`), `--dump-graph` (JSON graph snapshot), `--top N` (limits **both** the greedy fix-order table and the blast-ranked table, and the matching JSON arrays; `--fail-coverage` still uses the full greedy run), `--source-kinds`, `--ignore` (comma-separated picomatch globs), `--fail-above N`, `--fail-coverage P` (cumulative % from the greedy run must be ≥ P — see [PLAN.md](./PLAN.md) for edge cases). CI: [.github/actions/any-map-scan/action.yml](.github/actions/any-map-scan/action.yml) (`npx any-map@… scan . ${{ inputs.args }}`).
+
+Direct intra-project flow currently includes import bindings and resolved cross-file call edges, so `any` can propagate through chains like `export default value` -> `import x` -> `consume(x)`.
 
 ### `allowJs` / JavaScript
 
