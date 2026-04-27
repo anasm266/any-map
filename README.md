@@ -15,6 +15,8 @@ A single `any` in a utility can propagate through assignments, destructuring, an
 
 **Published on npm:** [`any-map`](https://www.npmjs.com/package/any-map) (see `package.json` for current version). Algorithm details and design notes: [PLAN.md](./PLAN.md).
 
+**v1.0 status:** The release criteria in [PLAN.md](./PLAN.md#11-definition-of-done-v10) are complete in the repo; the next release cut should be `v1.0.0`.
+
 **Recent usage:** `235` npm downloads from `2026-03-27` through `2026-04-25`.
 
 ## What it does
@@ -31,18 +33,20 @@ A single `any` in a utility can propagate through assignments, destructuring, an
 
 Inference-only kinds (`implicit-param`, `untyped-return`, `untyped-import`, `catch-binding`) are **not** reported for plain `.js`/`.jsx`/`.mjs`/`.cjs` where TypeScript often infers `any` without the developer “choosing” it — so source counts and set-cover stay meaningful on mixed TS/JS repos. Written `any` and other non–inference-only classifiers still apply where applicable.
 
-## Real-world benchmarks (how to read them)
+## Real-world benchmarks (snapshot: 2026-04-26)
 
 | Repo                                                  | Project files | `any` sources | Infected nodes | Top blast\* | Top-3 greedy cum. % |
 | ----------------------------------------------------- | ------------- | ------------- | -------------- | ----------- | ------------------- |
-| [typeorm/typeorm](https://github.com/typeorm/typeorm) | 3,336         | 1,460         | 908            | 80          | **16%**             |
-| [knex/knex](https://github.com/knex/knex)             | 142           | 12            | 2              | 2           | **100%**            |
+| [colinhacks/zod](https://github.com/colinhacks/zod)   | 357           | 834           | 457            | 13          | **5%**              |
+| [pmndrs/zustand](https://github.com/pmndrs/zustand)   | 30            | 131           | 52             | 2           | **12%**             |
+| [immerjs/immer](https://github.com/immerjs/immer)     | 16            | 138           | 121            | 17          | **21%**             |
+| [sindresorhus/ky](https://github.com/sindresorhus/ky) | 29            | 18            | 5              | 2           | **80%**             |
 
-\*Highest blast-radius among ranked sources (tie broken by sort order). TypeORM: clone, `pnpm install`, default `tsconfig`, then `any-map scan`. Knex is mostly JavaScript, so the **origin** set stays small by design; inference-only `any` on `.js` is not treated as a first-class “source” in the same way as in TS-heavy trees.
+\*Highest blast-radius among ranked sources (tie broken by sort order). These are snapshot runs against the default repo roots on April 26, 2026. Repos that extend shared tsconfig packages may need `pnpm install` before scanning so TypeScript can resolve the config chain.
 
-**Takeaway:** On a large, entangled ORM-size codebase, **a few “best” sources do not necessarily clear most infection** under greedy set-cover. Overlap and long tails dominate: top-3 cumulative coverage on TypeORM in this run is **16%** of infected nodes, not a marketing “80% with three fixes.” On a small, TS-light library like Knex, the same algorithm can look like “three fixes cover everything” because the graph and source count are tiny.
+**Takeaway:** Even among TS-native repos, top-3 greedy coverage ranges from **5%** to **80%**. Raw `any` count alone does not tell you whether a codebase “rewards” a few fixes; overlap and graph shape dominate.
 
-**Implication:** “Fixing these 3 any sources would restore type safety for 80% of your infected code” is a **storybook** example. Real repos may need a **long list of small fixes** or a different policy (e.g. blast-radius-first sprints, module-by-module hardening). A future version may surface an **overlap / set-cover health** line so you can see up front whether your repo “rewards” a few high-impact fixes. Until then, treat **blast** and **greedy** as **two different lenses**, not a single magic number.
+**Implication:** “Fixing these 3 any sources would restore type safety for most of the repo” is sometimes true and often false. `any-map` is most useful when it shows you that the long tail is real, not when it flatters you with a single magic percentage. For a larger, more entangled stress-test, the TypeORM sample below remains a good illustration of the same point.
 
 `any-map trace src/foo.ts:12:5` prints forward hops (`reason` per edge) from each source to the traced binding; use `--json` for machine-readable `TraceReport`.
 

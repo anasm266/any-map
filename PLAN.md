@@ -1,6 +1,6 @@
 # any-map — Detailed build plan
 
-> **Status:** Living document. The CLI, library API, analyzer pipeline, and composite GitHub Action described here are implemented; see [CHANGELOG](./CHANGELOG.md) for version history. §11 lists remaining **v1.0** criteria.
+> **Status:** Living document. The CLI, library API, analyzer pipeline, and composite GitHub Action described here are implemented; see [CHANGELOG](./CHANGELOG.md) for version history. §11 tracks the **v1.0** release criteria.
 
 ## 0. Summary
 
@@ -337,7 +337,7 @@ v1.1+ backlog (do not touch until v1 ships):
 - [x] `--format table|json|dot` works.
 - [x] `--fail-above`, `--fail-coverage` CI flags work.
 - [x] Fixture recall tests (`tests/eval/fixtures-recall.test.ts`); numeric ≥95% / ≥90% targets remain goals, not hard gates.
-- [ ] Benchmark table in README with **≥4** real TS-native repos (currently 2 + smoke fixture).
+- [x] Benchmark table in README with **≥4** real TS-native repos (`zod`, `zustand`, `immer`, `ky`).
 - [x] Reusable GitHub Action published **in this repo** (`.github/actions/any-map-scan`).
 
-When remaining items are satisfied: tag **`v1.0.0`**.
+All v1.0 criteria above are now satisfied; the next release tag should be **`v1.0.0`**.

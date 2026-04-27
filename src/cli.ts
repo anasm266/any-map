@@ -8,12 +8,14 @@ import { runGraphCommand } from "./commands/graph.js";
 import { runScanCommand, type ScanCliFormat } from "./commands/scan.js";
 import { runTraceCommand } from "./commands/trace.js";
 
+declare const __ANY_MAP_VERSION__: string;
+
 const program = new Command();
 
 program
   .name("any-map")
-  .description("Static flow analysis for TypeScript any types (pre-1.0).")
-  .version("0.0.0");
+  .description("Static flow analysis for TypeScript `any` types.")
+  .version(__ANY_MAP_VERSION__);
 
 function parseFailCoverageOpt(raw: string | undefined): number | undefined {
   if (raw === undefined) return undefined;
@@ -207,6 +209,6 @@ program
   );
 
 void program.parseAsync(process.argv).catch((err: unknown) => {
-  console.error(err);
+  console.error(err instanceof Error ? err.message : err);
   process.exitCode = 1;
 });

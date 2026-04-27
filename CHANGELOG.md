@@ -1,5 +1,15 @@
 # any-map
 
+## 1.0.0
+
+### Major Changes
+
+- Mark the current analyzer, CLI, and GitHub Action as the first stable `1.0.0` release line. This release also fixes CLI version reporting and refreshes the benchmark evidence used to justify the v1 tag.
+
+### Patch Changes
+
+- 0132634: Documentation: remove first-person dev narrative, week-by-week milestones, and similar meta from Markdown; keep technical content only.
+
 ## 0.1.1
 
 ### Patch Changes
