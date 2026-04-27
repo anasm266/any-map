@@ -40,6 +40,14 @@ function getEnclosingFunctionLike(
   return undefined;
 }
 
+function propertyNameText(name: ts.PropertyName): string | undefined {
+  if (ts.isIdentifier(name) || ts.isPrivateIdentifier(name)) return name.text;
+  if (ts.isStringLiteralLike(name) || ts.isNumericLiteral(name)) {
+    return name.text;
+  }
+  return undefined;
+}
+
 export class GraphBuilder {
   private readonly checker: ts.TypeChecker;
   private readonly nodes = new Map<string, GraphNodeMutable>();
@@ -111,6 +119,83 @@ export class GraphBuilder {
     return id;
   }
 
+  private ensurePropertyNamedNode(
+    name: ts.PropertyName,
+    discriminator = "",
+  ): string | undefined {
+    const text = propertyNameText(name);
+    if (!text) return undefined;
+    const sf = name.getSourceFile();
+    if (!this.isUserSourceFile(sf)) return undefined;
+    const filePath = this.rel(sf);
+    const start = name.getStart(sf, false);
+    const { line, character } = sf.getLineAndCharacterOfPosition(start);
+    const line1 = line + 1;
+    const col1 = character + 1;
+    const id = makeNodeId(filePath, line1, col1, text, discriminator);
+    if (!this.nodes.has(id)) {
+      this.nodes.set(id, {
+        id,
+        filePath,
+        line: line1,
+        column: col1,
+        name: text,
+        kind: "property",
+        typeString: this.typeStringAt(name),
+        isSource: false,
+        infectedBy: new Set(),
+      });
+    }
+    return id;
+  }
+
+  private declarationForSymbol(
+    sym: ts.Symbol | undefined,
+  ): ts.Declaration | undefined {
+    return (
+      sym?.declarations?.find(
+        (decl) =>
+          ts.isImportClause(decl) ||
+          ts.isImportSpecifier(decl) ||
+          ts.isNamespaceImport(decl) ||
+          ts.isImportEqualsDeclaration(decl),
+      ) ?? sym?.valueDeclaration
+    );
+  }
+
+  private propertySymbolForElementAccess(
+    expr: ts.ElementAccessExpression,
+  ): ts.Symbol | undefined {
+    const arg = expr.argumentExpression;
+    if (!arg || (!ts.isStringLiteralLike(arg) && !ts.isNumericLiteral(arg))) {
+      return undefined;
+    }
+    const key = arg.text;
+    const baseType = this.checker.getTypeAtLocation(expr.expression);
+    const apparent = this.checker.getApparentType(baseType);
+    return (
+      this.checker.getPropertyOfType(apparent, key) ??
+      this.checker.getPropertyOfType(baseType, key)
+    );
+  }
+
+  private reasonForValueRead(expr: ts.Expression): EdgeReason {
+    if (ts.isParenthesizedExpression(expr)) {
+      return this.reasonForValueRead(expr.expression);
+    }
+    if (
+      ts.isAsExpression(expr) ||
+      ts.isTypeAssertionExpression(expr) ||
+      ts.isSatisfiesExpression(expr) ||
+      ts.isNonNullExpression(expr)
+    ) {
+      return this.reasonForValueRead(expr.expression);
+    }
+    if (ts.isPropertyAccessExpression(expr)) return "property-access";
+    if (ts.isElementAccessExpression(expr)) return "index-access";
+    return "assignment";
+  }
+
   private ensureFromValueDeclaration(vd: ts.Declaration): string | undefined {
     if (ts.isImportClause(vd) && vd.name) {
       return this.ensureImportBinding(vd.name);
@@ -135,6 +220,15 @@ export class GraphBuilder {
     }
     if (ts.isPropertyDeclaration(vd) && ts.isIdentifier(vd.name)) {
       return this.ensureNamedDecl(vd, "property");
+    }
+    if (ts.isGetAccessorDeclaration(vd)) {
+      return this.ensurePropertyNamedNode(vd.name, "getter");
+    }
+    if (ts.isPropertyAssignment(vd)) {
+      return this.ensurePropertyNamedNode(vd.name, "object");
+    }
+    if (ts.isShorthandPropertyAssignment(vd)) {
+      return this.ensurePropertyNamedNode(vd.name, "object");
     }
     return undefined;
   }
@@ -278,16 +372,32 @@ export class GraphBuilder {
 
   /** Value-flow sources: identifiers / simple references with a registered declaration. */
   exprToNodeId(expr: ts.Expression): string | undefined {
-    if (!ts.isIdentifier(expr)) return undefined;
-    const sym = this.checker.getSymbolAtLocation(expr);
-    const vd =
-      sym?.declarations?.find(
-        (decl) =>
-          ts.isImportClause(decl) ||
-          ts.isImportSpecifier(decl) ||
-          ts.isNamespaceImport(decl) ||
-          ts.isImportEqualsDeclaration(decl),
-      ) ?? sym?.valueDeclaration;
+    if (ts.isParenthesizedExpression(expr)) {
+      return this.exprToNodeId(expr.expression);
+    }
+    if (
+      ts.isAsExpression(expr) ||
+      ts.isTypeAssertionExpression(expr) ||
+      ts.isSatisfiesExpression(expr) ||
+      ts.isNonNullExpression(expr)
+    ) {
+      return this.exprToNodeId(expr.expression);
+    }
+
+    let sym: ts.Symbol | undefined;
+    if (ts.isIdentifier(expr)) {
+      sym = this.checker.getSymbolAtLocation(expr);
+    } else if (ts.isPropertyAccessExpression(expr)) {
+      sym =
+        this.checker.getSymbolAtLocation(expr.name) ??
+        this.checker.getSymbolAtLocation(expr);
+    } else if (ts.isElementAccessExpression(expr)) {
+      sym = this.propertySymbolForElementAccess(expr);
+    } else {
+      return undefined;
+    }
+
+    const vd = this.declarationForSymbol(sym);
     if (!vd) return undefined;
     return this.ensureFromValueDeclaration(vd);
   }
@@ -370,6 +480,20 @@ export class GraphBuilder {
       if (ts.isSpreadAssignment(p)) {
         const sid = this.exprToNodeId(p.expression);
         if (sid) this.addEdge(sid, lhs, "spread");
+        continue;
+      }
+      if (ts.isPropertyAssignment(p)) {
+        const pid = this.ensureFromValueDeclaration(p);
+        const rhs = this.exprToNodeId(p.initializer);
+        if (pid && rhs) {
+          this.addEdge(rhs, pid, this.reasonForValueRead(p.initializer));
+        }
+        continue;
+      }
+      if (ts.isShorthandPropertyAssignment(p)) {
+        const pid = this.ensureFromValueDeclaration(p);
+        const rhs = this.exprToNodeId(p.name);
+        if (pid && rhs) this.addEdge(rhs, pid, "assignment");
       }
     }
   }
@@ -382,13 +506,16 @@ export class GraphBuilder {
     }
     if (
       ts.isBinaryExpression(e) &&
-      e.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-      ts.isCallExpression(e.right)
+      e.operatorToken.kind === ts.SyntaxKind.EqualsToken
     ) {
-      const lhsId = ts.isIdentifier(e.left)
-        ? this.exprToNodeId(e.left)
-        : undefined;
-      this.edgesFromCall(e.right, lhsId);
+      const lhsId = this.exprToNodeId(e.left);
+      if (!lhsId) return;
+      if (ts.isCallExpression(e.right)) {
+        this.edgesFromCall(e.right, lhsId);
+        return;
+      }
+      const rhsId = this.exprToNodeId(e.right);
+      if (rhsId) this.addEdge(rhsId, lhsId, this.reasonForValueRead(e.right));
     }
   }
 
@@ -405,6 +532,11 @@ export class GraphBuilder {
       }
       if (ts.isCallExpression(init)) {
         this.edgesFromCall(init, lhs);
+        return;
+      }
+      const rhs = this.exprToNodeId(init);
+      if (rhs) {
+        this.addEdge(rhs, lhs, this.reasonForValueRead(init));
         return;
       }
       if (ts.isObjectLiteralExpression(init)) {
@@ -427,7 +559,9 @@ export class GraphBuilder {
     if (!fn) return;
     const retId = this.ensureReturnNode(fn);
     const exId = this.exprToNodeId(node.expression);
-    if (retId && exId) this.addEdge(exId, retId, "assignment");
+    if (retId && exId) {
+      this.addEdge(exId, retId, this.reasonForValueRead(node.expression));
+    }
   }
 
   private visitPropertyDeclaration(node: ts.PropertyDeclaration): void {

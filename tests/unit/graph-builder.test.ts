@@ -11,12 +11,11 @@ function hasEdge(
   fromName: string,
   toName: string,
 ): boolean {
-  const idOf = (name: string) => g.nodes.find((n) => n.name === name)?.id;
-  const from = idOf(fromName);
-  const to = idOf(toName);
-  if (!from || !to) return false;
   return g.edges.some(
-    (e) => e.from === from && e.to === to && e.reason === reason,
+    (e) =>
+      e.reason === reason &&
+      g.nodes.some((n) => n.id === e.from && n.name === fromName) &&
+      g.nodes.some((n) => n.id === e.to && n.name === toName),
   );
 }
 
@@ -123,6 +122,22 @@ describe("intra-module graph (m3)", () => {
     expect(hasEdge(g, "assignment", "imported", "local")).toBe(true);
   });
 
+  it("property-access: object literal property read flows to assignment target", () => {
+    const g = graphFor({
+      "src/index.ts": `const seed = 1;\nconst obj = { payload: seed };\nconst local = obj.payload;\n`,
+    });
+    expect(hasEdge(g, "assignment", "seed", "payload")).toBe(true);
+    expect(hasEdge(g, "property-access", "payload", "local")).toBe(true);
+  });
+
+  it("index-access: string-literal property read flows to assignment target", () => {
+    const g = graphFor({
+      "src/index.ts": `const seed = 1;\nconst obj = { payload: seed };\nconst local = obj["payload"];\n`,
+    });
+    expect(hasEdge(g, "assignment", "seed", "payload")).toBe(true);
+    expect(hasEdge(g, "index-access", "payload", "local")).toBe(true);
+  });
+
   it("arrow in variable: return uses return slot anchored on binding name", () => {
     const g = graphFor({
       "src/index.ts": `const arrow = (): number => {\n  const v = 3;\n  return v;\n};\n`,
@@ -162,6 +177,21 @@ describe("intra-module graph (m3)", () => {
       "src/index.ts": `import imported from "./lib";\nimport { consume } from "./consume";\nconsume(imported);\n`,
     });
     expect(hasEdge(g, "parameter-binding", "imported", "formal")).toBe(true);
+  });
+
+  it("parameter-binding uses property reads as call arguments", () => {
+    const g = graphFor({
+      "src/index.ts": `const seed = 1;\nconst obj = { payload: seed };\nfunction consume(formal: number): void { void formal; }\nconsume(obj.payload);\n`,
+    });
+    expect(hasEdge(g, "assignment", "seed", "payload")).toBe(true);
+    expect(hasEdge(g, "parameter-binding", "payload", "formal")).toBe(true);
+  });
+
+  it("assignment statement: lhs = rhs adds a direct flow edge", () => {
+    const g = graphFor({
+      "src/index.ts": `const source = 1;\nlet sink;\nsink = source;\n`,
+    });
+    expect(hasEdge(g, "assignment", "source", "sink")).toBe(true);
   });
 });
 
@@ -223,5 +253,25 @@ describe("propagation + blast (m4)", () => {
     expect(source).toBeDefined();
     expect(imported?.infectedBy).toContain(source?.id);
     expect(formal?.infectedBy).toContain(source?.id);
+  });
+
+  it("object property reads propagate any infections into downstream locals", () => {
+    const g = graphFor({
+      "src/index.ts": `const seed: any = 1;\nconst obj = { payload: seed };\nconst local = obj.payload;\n`,
+    });
+    const source = g.nodes.find((n) => n.name === "seed" && n.isSource);
+    const local = g.nodes.find((n) => n.name === "local");
+    expect(source).toBeDefined();
+    expect(local?.infectedBy).toContain(source?.id);
+  });
+
+  it("assignment statements preserve propagated infections", () => {
+    const g = graphFor({
+      "src/index.ts": `const seed: any = 1;\nlet sink;\nsink = seed;\n`,
+    });
+    const source = g.nodes.find((n) => n.name === "seed" && n.isSource);
+    const sink = g.nodes.find((n) => n.name === "sink");
+    expect(source).toBeDefined();
+    expect(sink?.infectedBy).toContain(source?.id);
   });
 });
