@@ -13,11 +13,9 @@ A single `any` in a utility can propagate through assignments, destructuring, an
 
 ## Status
 
-**Published on npm:** [`any-map`](https://www.npmjs.com/package/any-map) `v1.3.0`. Algorithm details and design notes: [PLAN.md](./PLAN.md).
+**Published on npm:** [`any-map`](https://www.npmjs.com/package/any-map) `v1.4.0`. Algorithm details and design notes: [PLAN.md](./PLAN.md).
 
-**Current release:** `1.3.0` adds `any-map diff <base> <head>` for merge-base branch comparisons, alongside the existing imported-value, property/index-read, and assignment propagation improvements from `1.1`/`1.2`.
-
-**On `main`:** import/re-export chains now preserve intermediate export hops in the graph, and explicit `: any` function returns infect downstream callers more accurately.
+**Current release:** `1.4.0` preserves intermediate re-export hops in the flow graph, improves explicit `: any` function return propagation into downstream callers, and fixes `untyped-import` double-counting for local TypeScript exports. The `1.3.0` line added `any-map diff <base> <head>` for merge-base branch comparisons.
 
 **Recent usage:** `235` npm downloads from `2026-03-27` through `2026-04-25`.
 
