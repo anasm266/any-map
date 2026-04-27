@@ -1,5 +1,11 @@
 # any-map
 
+## 1.2.0
+
+### Minor Changes
+
+- 54f45ec: Improve graph propagation through object property reads, string-literal index reads, and plain assignment statements.
+
 ## 1.1.0
 
 ### Minor Changes
