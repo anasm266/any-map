@@ -119,7 +119,7 @@ Details: [PLAN.md §5](./PLAN.md#5-algorithms).
 
 ## Maintainer / release notes
 
-- **NPM on CI:** [`.github/workflows/release.yml`](.github/workflows/release.yml) needs an [`NPM_TOKEN`](https://docs.npmjs.com/trusted-publishers) repository secret, or the workflow fails on push. Local publish still works.
+- **NPM on CI:** [`.github/workflows/release.yml`](.github/workflows/release.yml) publishes through npm trusted publishing (OIDC) from GitHub Actions; no long-lived `NPM_TOKEN` is required. Keep the npm trusted publisher config aligned with this repo and workflow filename.
 - **Releases:** tag and GitHub Release should match the version published to npm (see the release workflow).
 
 ## Development
