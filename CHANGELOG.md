@@ -1,5 +1,15 @@
 # any-map
 
+## 1.4.0
+
+### Minor Changes
+
+- ef90eb9: Preserve intermediate re-export hops in the flow graph, including named and `export *` chains, and improve explicit `: any` function return propagation into downstream callers.
+
+### Patch Changes
+
+- ef90eb9: Fix `untyped-import` classification so imports from local TypeScript exports that already carry `any` are not double-counted as new import sources.
+
 ## 1.3.0
 
 ### Minor Changes
