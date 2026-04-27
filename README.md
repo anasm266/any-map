@@ -13,9 +13,9 @@ A single `any` in a utility can propagate through assignments, destructuring, an
 
 ## Status
 
-**Published on npm:** [`any-map`](https://www.npmjs.com/package/any-map) `v1.1.0`. Algorithm details and design notes: [PLAN.md](./PLAN.md).
+**Published on npm:** [`any-map`](https://www.npmjs.com/package/any-map) `v1.2.0`. Algorithm details and design notes: [PLAN.md](./PLAN.md).
 
-**Current release:** `1.1.0` adds graph propagation through imported value bindings, including default imports used in downstream assignments and direct intra-project call arguments.
+**Current release:** `1.2.0` extends propagation through imported value bindings, property/index reads, and plain assignment statements, including direct intra-project call arguments.
 
 **Recent usage:** `235` npm downloads from `2026-03-27` through `2026-04-25`.
 
