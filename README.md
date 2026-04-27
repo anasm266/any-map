@@ -3,6 +3,7 @@
 > Static flow analysis for TypeScript `any` types. Finds the few sources responsible for most of your type erosion.
 
 [![npm version](https://img.shields.io/npm/v/any-map.svg)](https://www.npmjs.com/package/any-map)
+[![npm downloads](https://img.shields.io/npm/dm/any-map.svg)](https://www.npmjs.com/package/any-map)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![CI](https://github.com/anasm266/any-map/actions/workflows/ci.yml/badge.svg)](https://github.com/anasm266/any-map/actions/workflows/ci.yml)
 
@@ -13,6 +14,8 @@ A single `any` in a utility can propagate through assignments, destructuring, an
 ## Status
 
 **Published on npm:** [`any-map`](https://www.npmjs.com/package/any-map) (see `package.json` for current version). Algorithm details and design notes: [PLAN.md](./PLAN.md).
+
+**Recent usage:** `235` npm downloads from `2026-03-27` through `2026-04-25`.
 
 ## What it does
 
