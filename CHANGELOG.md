@@ -1,5 +1,11 @@
 # any-map
 
+## 1.1.0
+
+### Minor Changes
+
+- f67041c: Improve graph propagation through imported value bindings, including default imports used in assignments and cross-module call arguments.
+
 ## 1.0.0
 
 ### Major Changes
