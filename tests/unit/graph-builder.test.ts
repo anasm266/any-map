@@ -19,6 +19,27 @@ function hasEdge(
   );
 }
 
+function hasEdgeInFiles(
+  g: SerializedGraph,
+  reason: SerializedGraph["edges"][number]["reason"],
+  fromFile: string,
+  fromName: string,
+  toFile: string,
+  toName: string,
+): boolean {
+  return g.edges.some(
+    (e) =>
+      e.reason === reason &&
+      g.nodes.some(
+        (n) =>
+          n.id === e.from && n.filePath === fromFile && n.name === fromName,
+      ) &&
+      g.nodes.some(
+        (n) => n.id === e.to && n.filePath === toFile && n.name === toName,
+      ),
+  );
+}
+
 function graphFor(files: Record<string, string>): SerializedGraph {
   let out!: SerializedGraph;
   withTempProject(files, (root) => {
@@ -120,6 +141,62 @@ describe("intra-module graph (m3)", () => {
     });
     expect(hasEdge(g, "import", "exported", "imported")).toBe(true);
     expect(hasEdge(g, "assignment", "imported", "local")).toBe(true);
+  });
+
+  it("named re-export chain preserves an intermediate export-binding hop", () => {
+    const g = graphFor({
+      "src/lib.ts": `export const exported = 1;\n`,
+      "src/mid.ts": `export { exported as renamed } from "./lib";\n`,
+      "src/index.ts": `import { renamed } from "./mid";\nvoid renamed;\n`,
+    });
+    expect(
+      hasEdgeInFiles(
+        g,
+        "re-export",
+        "src/lib.ts",
+        "exported",
+        "src/mid.ts",
+        "renamed",
+      ),
+    ).toBe(true);
+    expect(
+      hasEdgeInFiles(
+        g,
+        "import",
+        "src/mid.ts",
+        "renamed",
+        "src/index.ts",
+        "renamed",
+      ),
+    ).toBe(true);
+  });
+
+  it("export-star re-export chain preserves an intermediate export-binding hop", () => {
+    const g = graphFor({
+      "src/lib.ts": `export const exported = 1;\n`,
+      "src/mid.ts": `export * from "./lib";\n`,
+      "src/index.ts": `import { exported } from "./mid";\nvoid exported;\n`,
+    });
+    expect(
+      hasEdgeInFiles(
+        g,
+        "re-export",
+        "src/lib.ts",
+        "exported",
+        "src/mid.ts",
+        "exported",
+      ),
+    ).toBe(true);
+    expect(
+      hasEdgeInFiles(
+        g,
+        "import",
+        "src/mid.ts",
+        "exported",
+        "src/index.ts",
+        "exported",
+      ),
+    ).toBe(true);
   });
 
   it("property-access: object literal property read flows to assignment target", () => {
@@ -241,6 +318,19 @@ describe("propagation + blast (m4)", () => {
     expect(y?.infectedBy).toContain(ret?.id);
   });
 
+  it("explicit-any return annotations infect callers via the return slot", () => {
+    const g = graphFor({
+      "src/index.ts": `function f(): any {\n  return 1;\n}\nconst y = f();\n`,
+    });
+    const ret = g.nodes.find(
+      (n) => n.kind === "return" && n.name === "f" && n.isSource,
+    );
+    const y = g.nodes.find((n) => n.name === "y");
+    expect(ret).toBeDefined();
+    expect(ret?.sourceKind).toBe("explicit-any");
+    expect(y?.infectedBy).toContain(ret?.id);
+  });
+
   it("default import bindings keep propagated any infections alive across files", () => {
     const g = graphFor({
       "src/lib.ts": `const exported: any = 1;\nexport default exported;\n`,
@@ -253,6 +343,40 @@ describe("propagation + blast (m4)", () => {
     expect(source).toBeDefined();
     expect(imported?.infectedBy).toContain(source?.id);
     expect(formal?.infectedBy).toContain(source?.id);
+  });
+
+  it("re-exported default functions with explicit-any returns infect downstream callers", () => {
+    const g = graphFor({
+      "src/lib.ts": `export default function fn(): any {\n  return 1;\n}\n`,
+      "src/mid.ts": `export { default as renamed } from "./lib";\n`,
+      "src/index.ts": `import { renamed } from "./mid";\nconst local = renamed();\n`,
+    });
+    const ret = g.nodes.find(
+      (n) => n.kind === "return" && n.name === "fn" && n.isSource,
+    );
+    const local = g.nodes.find((n) => n.name === "local");
+    expect(ret).toBeDefined();
+    expect(
+      hasEdgeInFiles(
+        g,
+        "re-export",
+        "src/lib.ts",
+        "fn",
+        "src/mid.ts",
+        "renamed",
+      ),
+    ).toBe(true);
+    expect(
+      hasEdgeInFiles(
+        g,
+        "import",
+        "src/mid.ts",
+        "renamed",
+        "src/index.ts",
+        "renamed",
+      ),
+    ).toBe(true);
+    expect(local?.infectedBy).toContain(ret?.id);
   });
 
   it("object property reads propagate any infections into downstream locals", () => {

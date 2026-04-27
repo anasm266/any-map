@@ -152,9 +152,25 @@ function findUntypedImportSources(
 ): AnySource[] {
   const out: AnySource[] = [];
 
+  const isTrueUntypedImport = (id: ts.Identifier): boolean => {
+    const localSym = checker.getSymbolAtLocation(id);
+    if (!localSym) return true;
+    const aliased =
+      (localSym.flags & ts.SymbolFlags.Alias) !== 0
+        ? checker.getAliasedSymbol(localSym)
+        : localSym;
+    const originDecl = aliased.valueDeclaration ?? aliased.declarations?.[0];
+    if (!originDecl) return true;
+    const originSf = originDecl.getSourceFile();
+    if (isJavaScriptInputFile(originSf)) return true;
+    if (originSf.isDeclarationFile) return true;
+    return isFromNodeModulesOrDts(originSf);
+  };
+
   const checkBinding = (id: ts.Identifier): void => {
     const t = checker.getTypeAtLocation(id);
     if (!isAnyType(t)) return;
+    if (!isTrueUntypedImport(id)) return;
     const sf = id.getSourceFile();
     const pos = positionOfNode(id, sf);
     out.push({

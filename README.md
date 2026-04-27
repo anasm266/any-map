@@ -17,6 +17,8 @@ A single `any` in a utility can propagate through assignments, destructuring, an
 
 **Current release:** `1.3.0` adds `any-map diff <base> <head>` for merge-base branch comparisons, alongside the existing imported-value, property/index-read, and assignment propagation improvements from `1.1`/`1.2`.
 
+**On `main`:** import/re-export chains now preserve intermediate export hops in the graph, and explicit `: any` function returns infect downstream callers more accurately.
+
 **Recent usage:** `235` npm downloads from `2026-03-27` through `2026-04-25`.
 
 ## What it does
@@ -30,7 +32,7 @@ A single `any` in a utility can propagate through assignments, destructuring, an
 
 `any-map scan`: `--format table|json|dot` (or legacy `--json`), `--dump-graph` (JSON graph snapshot), `--top N` (limits **both** the greedy fix-order table and the blast-ranked table, and the matching JSON arrays; `--fail-coverage` still uses the full greedy run), `--source-kinds`, `--ignore` (comma-separated picomatch globs), `--fail-above N`, `--fail-coverage P` (cumulative % from the greedy run must be ≥ P — see [PLAN.md](./PLAN.md) for edge cases). CI: [.github/actions/any-map-scan/action.yml](.github/actions/any-map-scan/action.yml) (`npx any-map@… scan . ${{ inputs.args }}`).
 
-Direct intra-project flow currently includes import bindings, property/index reads, plain assignments, and resolved cross-file call edges, so `any` can propagate through chains like `export default value` -> `import x` -> `box.payload` -> `consume(x)`.
+Direct intra-project flow currently includes import bindings, re-export chains, property/index reads, plain assignments, and resolved cross-file call edges, so `any` can propagate through chains like `export default value` -> `export { value as renamed }` -> `import x` -> `box.payload` -> `consume(x)`.
 
 ### `allowJs` / JavaScript
 
@@ -117,10 +119,10 @@ Details: [PLAN.md §5](./PLAN.md#5-algorithms).
 ## Scope boundaries (v1 non-goals)
 
 - No full inference through generics / conditionals / distributive types (surface at usage only).
-- No full callsite-sensitive interprocedural analysis across re-export chains, dynamic dispatch, or overload/generic specialization; direct resolved callees are followed across project files.
+- No full callsite-sensitive interprocedural analysis across complex re-export chains, dynamic dispatch, or overload/generic specialization; direct resolved callees plus import/re-export hops are followed across project files.
 - No auto-fix, no LSP, no git history — see [PLAN.md §9](./PLAN.md#9-scope-boundaries-non-goals-for-v1).
 
-**Future direction (post–v1 scope):** broaden cross-module flow beyond directly resolved callees and import bindings with an export/callsite index that handles re-export chains and more complex expression forms.
+**Future direction (post–v1 scope):** broaden cross-module flow beyond direct import/re-export hops with deeper callsite sensitivity, overload/generic awareness, and more complex expression forms.
 
 ## Maintainer / release notes
 

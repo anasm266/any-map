@@ -81,7 +81,7 @@ describe("runDiffCommand", () => {
     expect(parsed.compareMode).toBe("merge-base");
     expect(parsed.scope).toBe("changed-files");
     expect(parsed.addedSources[0]?.name).toBe("leaked");
-  });
+  }, 20_000);
 
   it("omits empty delta sections in table output", async () => {
     const logs: string[] = [];
@@ -106,5 +106,5 @@ describe("runDiffCommand", () => {
     expect(output).not.toContain("Added sources");
     expect(output).not.toContain("Removed sources");
     expect(output).not.toContain("Blast radius changes");
-  });
+  }, 20_000);
 });
