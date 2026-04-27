@@ -114,6 +114,15 @@ describe("intra-module graph (m3)", () => {
     expect(hasEdge(g, "import", "exported", "impLoc")).toBe(true);
   });
 
+  it("default import binding participates in downstream assignment flow", () => {
+    const g = graphFor({
+      "src/lib.ts": `const exported = 1;\nexport default exported;\n`,
+      "src/index.ts": `import imported from "./lib";\nconst local = imported;\n`,
+    });
+    expect(hasEdge(g, "import", "exported", "imported")).toBe(true);
+    expect(hasEdge(g, "assignment", "imported", "local")).toBe(true);
+  });
+
   it("arrow in variable: return uses return slot anchored on binding name", () => {
     const g = graphFor({
       "src/index.ts": `const arrow = (): number => {\n  const v = 3;\n  return v;\n};\n`,
@@ -144,6 +153,15 @@ describe("intra-module graph (m3)", () => {
     expect(
       g.edges.some((e) => e.reason === "call-return" && e.to === midId),
     ).toBe(true);
+  });
+
+  it("cross-module parameter-binding uses imported default values as arguments", () => {
+    const g = graphFor({
+      "src/lib.ts": `const exported = 1;\nexport default exported;\n`,
+      "src/consume.ts": `export function consume(formal: number): void { void formal; }\n`,
+      "src/index.ts": `import imported from "./lib";\nimport { consume } from "./consume";\nconsume(imported);\n`,
+    });
+    expect(hasEdge(g, "parameter-binding", "imported", "formal")).toBe(true);
   });
 });
 
@@ -191,5 +209,19 @@ describe("propagation + blast (m4)", () => {
     const y = g.nodes.find((n) => n.name === "y");
     expect(ret).toBeDefined();
     expect(y?.infectedBy).toContain(ret?.id);
+  });
+
+  it("default import bindings keep propagated any infections alive across files", () => {
+    const g = graphFor({
+      "src/lib.ts": `const exported: any = 1;\nexport default exported;\n`,
+      "src/consume.ts": `export function consume(formal: number): void { void formal; }\n`,
+      "src/index.ts": `import imported from "./lib";\nimport { consume } from "./consume";\nconsume(imported);\n`,
+    });
+    const source = g.nodes.find((n) => n.name === "exported" && n.isSource);
+    const imported = g.nodes.find((n) => n.name === "imported");
+    const formal = g.nodes.find((n) => n.name === "formal");
+    expect(source).toBeDefined();
+    expect(imported?.infectedBy).toContain(source?.id);
+    expect(formal?.infectedBy).toContain(source?.id);
   });
 });

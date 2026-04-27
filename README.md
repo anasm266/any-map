@@ -25,7 +25,7 @@ A single `any` in a utility can propagate through assignments, destructuring, an
 | ---------------------------- | -------------------------------------------------------------------------------------- |
 | `any-map scan [path]`        | Analyze a TS project; table / JSON / DOT; filters + CI thresholds.                     |
 | `any-map trace <loc> [path]` | Print type-flow paths from each `any` source to the symbol at `loc` (`file:line:col`). |
-| `any-map graph [path]`       | Emit the intra-module type-flow graph as Graphviz DOT (`-o out.dot` or stdout).        |
+| `any-map graph [path]`       | Emit the project type-flow graph as Graphviz DOT (`-o out.dot` or stdout).             |
 
 `any-map scan`: `--format table|json|dot` (or legacy `--json`), `--dump-graph` (JSON graph snapshot), `--top N` (limits **both** the greedy fix-order table and the blast-ranked table, and the matching JSON arrays; `--fail-coverage` still uses the full greedy run), `--source-kinds`, `--ignore` (comma-separated picomatch globs), `--fail-above N`, `--fail-coverage P` (cumulative % from the greedy run must be ≥ P — see [PLAN.md](./PLAN.md) for edge cases). CI: [.github/actions/any-map-scan/action.yml](.github/actions/any-map-scan/action.yml) (`npx any-map@… scan . ${{ inputs.args }}`).
 
@@ -89,7 +89,7 @@ By blast radius
 ## How it works
 
 1. **Classify** every `any` source (explicit `: any`, `as any`, untyped imports, untyped returns, `catch (e)`, implicit params — see [PLAN.md](./PLAN.md)).
-2. **Build** a directed graph where each edge represents type flow (`const a = b` → `b` → `a`, intra-module).
+2. **Build** a directed graph where each edge represents type flow (`const a = b` → `b` → `a`, plus direct intra-project call/import edges).
 3. **Propagate** from each source with forward BFS; nodes track `infectedBy` source ids.
 4. **Rank** by blast radius; run **greedy set-cover** over infected nodes for fix order and cumulative %.
 5. **Emit** table, JSON, or DOT.
@@ -112,10 +112,10 @@ Details: [PLAN.md §5](./PLAN.md#5-algorithms).
 ## Scope boundaries (v1 non-goals)
 
 - No full inference through generics / conditionals / distributive types (surface at usage only).
-- Cross-module `param ← arg` uses **declared** parameter types, not interprocedural dataflow.
+- No full callsite-sensitive interprocedural analysis across re-export chains, dynamic dispatch, or overload/generic specialization; direct resolved callees are followed across project files.
 - No auto-fix, no LSP, no git history — see [PLAN.md §9](./PLAN.md#9-scope-boundaries-non-goals-for-v1).
 
-**Future direction (post–v1 scope):** an export/callsite index could connect argument expressions to parameters for cross-module flow when types align (overloads and generics need care).
+**Future direction (post–v1 scope):** broaden cross-module flow beyond directly resolved callees and import bindings with an export/callsite index that handles re-export chains and more complex expression forms.
 
 ## Maintainer / release notes
 
