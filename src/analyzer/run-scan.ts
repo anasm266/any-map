@@ -139,7 +139,7 @@ export function runFullScan(options: ScanOptions): FullScanResult {
 }
 
 /**
- * Classify `any` sources (m2), intra-module graph + propagation + blast ranking (m4), optional graph JSON (m3).
+ * Classify `any` sources (m2), build the project flow graph + propagation + blast ranking (m4), optional graph JSON (m3).
  */
 export function classifyScan(
   options: ScanOptions & { dumpGraph: true },

@@ -112,7 +112,16 @@ export class GraphBuilder {
   }
 
   private ensureFromValueDeclaration(vd: ts.Declaration): string | undefined {
+    if (ts.isImportClause(vd) && vd.name) {
+      return this.ensureImportBinding(vd.name);
+    }
     if (ts.isImportSpecifier(vd) && ts.isIdentifier(vd.name)) {
+      return this.ensureImportBinding(vd.name);
+    }
+    if (ts.isNamespaceImport(vd)) {
+      return this.ensureImportBinding(vd.name);
+    }
+    if (ts.isImportEqualsDeclaration(vd)) {
       return this.ensureImportBinding(vd.name);
     }
     if (ts.isVariableDeclaration(vd) && ts.isIdentifier(vd.name)) {
@@ -271,7 +280,14 @@ export class GraphBuilder {
   exprToNodeId(expr: ts.Expression): string | undefined {
     if (!ts.isIdentifier(expr)) return undefined;
     const sym = this.checker.getSymbolAtLocation(expr);
-    const vd = sym?.valueDeclaration;
+    const vd =
+      sym?.declarations?.find(
+        (decl) =>
+          ts.isImportClause(decl) ||
+          ts.isImportSpecifier(decl) ||
+          ts.isNamespaceImport(decl) ||
+          ts.isImportEqualsDeclaration(decl),
+      ) ?? sym?.valueDeclaration;
     if (!vd) return undefined;
     return this.ensureFromValueDeclaration(vd);
   }
@@ -293,9 +309,15 @@ export class GraphBuilder {
       for (const el of node.importClause.namedBindings.elements) {
         if (!el.isTypeOnly) locals.push(el.name);
       }
+    } else if (
+      node.importClause.namedBindings &&
+      ts.isNamespaceImport(node.importClause.namedBindings)
+    ) {
+      locals.push(node.importClause.namedBindings.name);
     }
 
     for (const local of locals) {
+      const importId = this.ensureImportBinding(local);
       const localSym = this.checker.getSymbolAtLocation(local);
       if (!localSym) continue;
       const aliased = this.checker.getAliasedSymbol(localSym);
@@ -304,7 +326,6 @@ export class GraphBuilder {
       const expSf = expDecl.getSourceFile();
       if (!this.isUserSourceFile(expSf)) continue;
       const exportId = this.ensureFromValueDeclaration(expDecl);
-      const importId = this.ensureImportBinding(local);
       if (exportId && importId) this.addEdge(exportId, importId, "import");
     }
   }
