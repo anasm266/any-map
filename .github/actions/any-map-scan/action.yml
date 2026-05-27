@@ -1,5 +1,5 @@
 name: any-map scan
-description: Run the any-map CLI against a TypeScript project (thresholds optional)
+description: Run the any-map CLI (scan or diff) with optional PR summary and fail gates
 
 inputs:
   command:
@@ -15,9 +15,9 @@ inputs:
     required: false
     default: "."
   version:
-    description: npm dist-tag or version for any-map (e.g. latest)
+    description: npm dist-tag or version for any-map (e.g. 2, latest)
     required: false
-    default: "latest"
+    default: "2"
   base-ref:
     description: Base ref for `diff`
     required: false
@@ -26,21 +26,111 @@ inputs:
     description: Head ref for `diff`
     required: false
     default: "HEAD"
+  report-format:
+    description: "CLI --format for JSON/SARIF capture (table | json | sarif)"
+    required: false
+    default: "json"
+  post-summary:
+    description: Write a markdown summary to GITHUB_STEP_SUMMARY (diff only)
+    required: false
+    default: "true"
+  fail-on-new-sources:
+    description: Pass --fail-on-new-sources for diff
+    required: false
+    default: "false"
   args:
-    description: Extra CLI arguments (e.g. --fail-above 10 --fail-coverage 80)
+    description: Extra CLI arguments
     required: false
     default: ""
 
 runs:
   using: composite
   steps:
-    - name: Scan
+    - name: Run any-map
+      id: run
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
         set -euo pipefail
-        if [ "${{ inputs.command }}" = "diff" ]; then
-          npx --yes any-map@${{ inputs.version }} diff "${{ inputs.base-ref }}" "${{ inputs.head-ref }}" "${{ inputs.path }}" ${{ inputs.args }}
-        else
-          npx --yes any-map@${{ inputs.version }} scan "${{ inputs.path }}" ${{ inputs.args }}
+        EXTRA_ARGS="${{ inputs.args }}"
+        if [ "${{ inputs.fail-on-new-sources }}" = "true" ]; then
+          EXTRA_ARGS="$EXTRA_ARGS --fail-on-new-sources"
         fi
+        if [ "${{ inputs.command }}" = "diff" ]; then
+          npx --yes any-map@${{ inputs.version }} diff \
+            "${{ inputs.base-ref }}" "${{ inputs.head-ref }}" \
+            "${{ inputs.path }}" \
+            --format "${{ inputs.report-format }}" \
+            $EXTRA_ARGS > any-map-output.json || STATUS=$?
+          echo "exit_code=${STATUS:-0}" >> "$GITHUB_OUTPUT"
+          exit ${STATUS:-0}
+        else
+          npx --yes any-map@${{ inputs.version }} scan \
+            "${{ inputs.path }}" \
+            --format "${{ inputs.report-format }}" \
+            $EXTRA_ARGS
+        fi
+
+    - name: PR summary
+      if: inputs.command == 'diff' && inputs.post-summary == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set -euo pipefail
+        if [ ! -f any-map-output.json ]; then
+          echo "No any-map output file; skipping summary."
+          exit 0
+        fi
+        node <<'NODE'
+        const fs = require('fs');
+        const raw = fs.readFileSync('any-map-output.json', 'utf8');
+        const data = JSON.parse(raw);
+        const totals = data.totals ?? data;
+        const added = data.diff?.addedSources ?? data.addedSources ?? [];
+        const lines = [
+          '## any-map diff',
+          '',
+          '| Metric | Before | After | Delta |',
+          '| --- | ---: | ---: | ---: |',
+        ];
+        if (totals.beforeSourceCount !== undefined) {
+          lines.push(
+            `| Sources | ${totals.beforeSourceCount} | ${totals.afterSourceCount} | ${totals.sourceDelta >= 0 ? '+' : ''}${totals.sourceDelta} |`,
+            `| Infected nodes | ${totals.beforeInfectedNodeCount} | ${totals.afterInfectedNodeCount} | ${totals.infectedNodeDelta >= 0 ? '+' : ''}${totals.infectedNodeDelta} |`,
+            `| Top-3 greedy % | ${totals.beforeTop3CoveragePct} | ${totals.afterTop3CoveragePct} | ${totals.top3CoverageDeltaPct >= 0 ? '+' : ''}${totals.top3CoverageDeltaPct} |`,
+          );
+        }
+        lines.push('', '### New sources (top 5)', '');
+        if (added.length === 0) {
+          lines.push('_None in scope._');
+        } else {
+          for (const s of added.slice(0, 5)) {
+            lines.push(`- \`${s.filePath}:${s.line}\` **${s.name}** (${s.sourceKind}, blast ${s.blastRadius})`);
+          }
+        }
+        const health = data.health?.after ?? data.after?.health;
+        if (health?.summaryLine) {
+          lines.push('', '### Scan health (head)', '', health.summaryLine);
+        }
+        fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n'));
+        NODE
+
+    - name: Workflow annotations
+      if: inputs.command == 'diff' && inputs.report-format == 'json'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set -euo pipefail
+        if [ ! -f any-map-output.json ]; then exit 0; fi
+        node <<'NODE'
+        const fs = require('fs');
+        const data = JSON.parse(fs.readFileSync('any-map-output.json', 'utf8'));
+        const added = data.diff?.addedSources ?? data.addedSources ?? [];
+        let n = 0;
+        for (const s of added) {
+          if (n >= 10) break;
+          const msg = `any-map: new ${s.sourceKind} source (blast ${s.blastRadius})`;
+          console.log(`::warning file=${s.filePath},line=${s.line},col=${s.column}::${msg}`);
+          n++;
+        }
+        NODE

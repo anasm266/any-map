@@ -1,0 +1,28 @@
+name: any-map PR
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  diff:
+    name: any-map diff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: any-map branch diff
+        uses: ./.github/actions/any-map-scan
+        with:
+          command: diff
+          version: "2"
+          base-ref: ${{ github.event.pull_request.base.sha }}
+          head-ref: ${{ github.event.pull_request.head.sha }}
+          report-format: json
+          post-summary: "true"
+          fail-on-new-sources: "true"

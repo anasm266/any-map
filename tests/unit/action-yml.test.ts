@@ -17,11 +17,12 @@ describe("composite action wiring", () => {
     expect(actionYml).toContain('default: "scan"');
     expect(actionYml).toContain("base-ref:");
     expect(actionYml).toContain("head-ref:");
-    expect(actionYml).toContain(
-      'npx --yes any-map@${{ inputs.version }} scan "${{ inputs.path }}" ${{ inputs.args }}',
-    );
-    expect(actionYml).toContain(
-      'npx --yes any-map@${{ inputs.version }} diff "${{ inputs.base-ref }}" "${{ inputs.head-ref }}" "${{ inputs.path }}" ${{ inputs.args }}',
-    );
+    expect(actionYml).toContain("npx --yes any-map@${{ inputs.version }} scan");
+    expect(actionYml).toContain("npx --yes any-map@${{ inputs.version }} diff");
+    expect(actionYml).toContain("report-format:");
+    expect(actionYml).toContain("post-summary:");
+    expect(actionYml).toContain("fail-on-new-sources:");
+    expect(actionYml).toContain('default: "2"');
+    expect(actionYml).toContain("GITHUB_STEP_SUMMARY");
   });
 });

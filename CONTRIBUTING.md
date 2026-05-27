@@ -63,7 +63,13 @@ If you're adding detection for a new TS construct:
 
 1. Add a labeled fixture under `tests/fixtures/<name>/` with an `expected.json`.
 2. Add a unit test in `tests/unit/classify.test.ts`.
-3. Ensure overall fixture recall stays ≥95% and precision ≥90%.
+3. Ensure overall fixture recall stays ≥95% and precision ≥90% (`tests/eval/fixtures-recall-metrics.test.ts` enforces this in CI).
+
+## Report v2 and SARIF
+
+- JSON: default `reportVersion: 2`; golden tests in `tests/unit/report-json.test.ts`.
+- SARIF: `tests/unit/to-sarif.test.ts`; map `addedSources` only for diff SARIF to limit noise.
+- Migration notes: [docs/v2-migration.md](./docs/v2-migration.md).
 
 ## Release process
 

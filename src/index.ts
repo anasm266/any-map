@@ -3,10 +3,31 @@ export type {
   BlastChangedSource,
   DiffSummary,
   GreedyCoverPick,
+  ScanHealth,
   ScanSummary,
+  SetCoverDistinctiveness,
   SourceKind,
   SourceRanked,
 } from "./types.js";
+export { computeScanHealth } from "./analyzer/scan-health.js";
+export { readScanCache, writeScanCache } from "./analyzer/scan-cache.js";
+export type { CreateProgramOptions } from "./analyzer/load-project.js";
+export {
+  toScanReport,
+  toDiffReport,
+  type ReportVersion,
+  type ScanReportV2,
+  type DiffReportV2,
+} from "./format/report-json.js";
+export {
+  scanSummaryToSarif,
+  diffSummaryToSarif,
+  setSarifToolVersion,
+} from "./format/to-sarif.js";
+export {
+  evaluateDiffFailure,
+  type DiffFailureOptions,
+} from "./commands/diff-failure.js";
 export {
   applyTopToScanSummary,
   buildScanOptions,

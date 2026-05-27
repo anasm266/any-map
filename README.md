@@ -13,22 +13,34 @@ A single `any` in a utility can propagate through assignments, destructuring, an
 
 ## Status
 
-**Published on npm:** [`any-map`](https://www.npmjs.com/package/any-map) `v1.4.0`. Algorithm details and design notes: [PLAN.md](./PLAN.md).
+**Published on npm:** [`any-map@2`](https://www.npmjs.com/package/any-map). Algorithm details: [PLAN.md](./PLAN.md). **Migrating from 1.x:** [docs/v2-migration.md](./docs/v2-migration.md).
 
-**Current release:** `1.4.0` preserves intermediate re-export hops in the flow graph, improves explicit `: any` function return propagation into downstream callers, and fixes `untyped-import` double-counting for local TypeScript exports. The `1.3.0` line added `any-map diff <base> <head>` for merge-base branch comparisons.
-
-**Recent usage:** `235` npm downloads from `2026-03-27` through `2026-04-25`.
+**v2.0** focuses on CI and PR workflows: scan **health** metrics (overlap + honest top-3 greedy interpretation), **diff fail gates**, **JSON report v2**, **SARIF** export, an enhanced **GitHub Action** (PR summary + annotations), and **diff scan caching**.
 
 ## What it does
 
 | Command                             | Purpose                                                                                |
 | ----------------------------------- | -------------------------------------------------------------------------------------- |
-| `any-map diff <base> <head> [path]` | Compare branch-introduced `any` deltas for touched files (table / JSON).               |
-| `any-map scan [path]`               | Analyze a TS project; table / JSON / DOT; filters + CI thresholds.                     |
+| `any-map diff <base> <head> [path]` | Branch `any` deltas (merge-base); table / JSON / SARIF; PR fail gates.                 |
+| `any-map scan [path]`               | Full-project analysis; table / JSON / DOT / SARIF; health footer.                      |
 | `any-map trace <loc> [path]`        | Print type-flow paths from each `any` source to the symbol at `loc` (`file:line:col`). |
 | `any-map graph [path]`              | Emit the project type-flow graph as Graphviz DOT (`-o out.dot` or stdout).             |
 
-`any-map scan`: `--format table|json|dot` (or legacy `--json`), `--dump-graph` (JSON graph snapshot), `--top N` (limits **both** the greedy fix-order table and the blast-ranked table, and the matching JSON arrays; `--fail-coverage` still uses the full greedy run), `--source-kinds`, `--ignore` (comma-separated picomatch globs), `--fail-above N`, `--fail-coverage P` (cumulative % from the greedy run must be ≥ P — see [PLAN.md](./PLAN.md) for edge cases). CI: [.github/actions/any-map-scan/action.yml](.github/actions/any-map-scan/action.yml) (`npx any-map@… scan . ${{ inputs.args }}`).
+`any-map scan`: `--format table|json|dot|sarif`, `--report-version 2` (default) or `1` (legacy), `--dump-graph`, `--top N`, `--source-kinds`, `--ignore`, `--fail-above N`, `--fail-top3-greedy-pct P` (see **scan health** before using this on large repos), `--max-files N`.
+
+`any-map diff`: `--fail-on-new-sources`, `--fail-on-infected-increase`, `--fail-on-blast-increase`, `--max-new-sources N`, `--no-cache`.
+
+**Pull request check (recommended):**
+
+```bash
+npx any-map@2 diff origin/main HEAD --fail-on-new-sources
+```
+
+CI: [.github/actions/any-map-scan](.github/actions/any-map-scan/action.yml) (`version: "2"`, `command: diff`) or [.github/workflows/any-map-pr.yml](.github/workflows/any-map-pr.yml).
+
+**SARIF (GitHub Code Scanning):** `any-map scan . --format sarif > any-map.sarif` then upload with [upload-sarif](https://github.com/github/codeql-action/tree/main/upload-sarif).
+
+**Pair with type-coverage:** [docs/integrations/type-coverage.md](./docs/integrations/type-coverage.md).
 
 Direct intra-project flow currently includes import bindings, re-export chains, property/index reads, plain assignments, and resolved cross-file call edges, so `any` can propagate through chains like `export default value` -> `export { value as renamed }` -> `import x` -> `box.payload` -> `consume(x)`.
 
@@ -125,7 +137,7 @@ Details: [PLAN.md §5](./PLAN.md#5-algorithms).
 ## Maintainer / release notes
 
 - **NPM on CI:** [`.github/workflows/release.yml`](.github/workflows/release.yml) publishes through npm trusted publishing (OIDC) from GitHub Actions; no long-lived `NPM_TOKEN` is required. Keep the npm trusted publisher config aligned with this repo and workflow filename.
-- **Reusable action:** [`.github/actions/any-map-scan`](.github/actions/any-map-scan/action.yml) now supports both `scan` and `diff`. Use `command: diff`, `base-ref`, `head-ref`, and optional `path` / `args` to review branch deltas in PR workflows.
+- **Reusable action:** [`.github/actions/any-map-scan`](.github/actions/any-map-scan/action.yml) — pin `version: "2"`, use `command: diff` with `fail-on-new-sources` and `post-summary: true` for PR reviews.
 - **Releases:** tag and GitHub Release should match the version published to npm (see the release workflow).
 
 ## Development
