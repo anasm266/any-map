@@ -5,22 +5,33 @@ import {
   summarizeDiffTotals,
   type DiffScanOptions,
 } from "../analyzer/diff-scan.js";
+import { toDiffReport, type ReportVersion } from "../format/report-json.js";
+import { diffSummaryToSarif, setSarifToolVersion } from "../format/to-sarif.js";
 import type {
   BlastChangedSource,
   DiffSummary,
   SourceKind,
   SourceRanked,
 } from "../types.js";
+import {
+  applyDiffFailureResult,
+  evaluateDiffFailure,
+  type DiffFailureOptions,
+} from "./diff-failure.js";
 
-export type DiffCliFormat = "table" | "json";
+export type DiffCliFormat = "table" | "json" | "sarif";
 
-export interface DiffCliOptions {
+export interface DiffCliOptions extends DiffFailureOptions {
   format?: DiffCliFormat;
   /** @deprecated use format === "json" */
   json?: boolean;
   top?: number;
   sourceKinds?: SourceKind[];
   ignoreGlobs?: string[];
+  reportVersion?: ReportVersion;
+  toolVersion?: string;
+  useCache?: boolean;
+  maxFiles?: number;
 }
 
 function signed(n: number): string {
@@ -141,15 +152,28 @@ export async function runDiffCommand(
   if (options.ignoreGlobs !== undefined)
     scanOptions.ignoreGlobs = options.ignoreGlobs;
   if (options.top !== undefined) scanOptions.top = options.top;
+  if (options.maxFiles !== undefined) scanOptions.maxFiles = options.maxFiles;
+  if (options.useCache === false) scanOptions.useCache = false;
 
   const format: DiffCliFormat =
     options.format ?? (options.json === true ? "json" : "table");
   const summary = diffScan(scanOptions);
+  const reportVersion = options.reportVersion ?? 2;
+  if (options.toolVersion) setSarifToolVersion(options.toolVersion);
 
   if (format === "json") {
-    console.log(JSON.stringify(summary, null, 2));
+    const report = toDiffReport(summary, reportVersion);
+    console.log(JSON.stringify(report, null, 2));
+    applyDiffFailureResult(evaluateDiffFailure(summary, options));
+    return;
+  }
+
+  if (format === "sarif") {
+    console.log(JSON.stringify(diffSummaryToSarif(summary), null, 2));
+    applyDiffFailureResult(evaluateDiffFailure(summary, options));
     return;
   }
 
   printDiffTables(summary);
+  applyDiffFailureResult(evaluateDiffFailure(summary, options));
 }

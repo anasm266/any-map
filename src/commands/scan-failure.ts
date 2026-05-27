@@ -3,6 +3,7 @@ import type { ScanSummary } from "../types.js";
 export interface ScanFailureOptions {
   failAbove?: number;
   failCoveragePct?: number;
+  failTop3GreedyPct?: number;
 }
 
 export function evaluateScanFailure(
@@ -15,16 +16,17 @@ export function evaluateScanFailure(
       message: `any-map scan: ${summary.sources.length} any source(s) exceeds --fail-above ${opts.failAbove}`,
     };
   }
-  if (opts.failCoveragePct !== undefined) {
+  const failTop3 = opts.failTop3GreedyPct ?? opts.failCoveragePct;
+  if (failTop3 !== undefined) {
     const picks = summary.greedyCoverPicks;
     const cov =
       picks.length === 0
         ? 100
         : picks[Math.min(2, picks.length - 1)]!.cumulativeCoveragePct;
-    if (cov < opts.failCoveragePct) {
+    if (cov < failTop3) {
       return {
         failed: true,
-        message: `any-map scan: top-3 greedy cumulative coverage ${cov}% is below --fail-coverage ${opts.failCoveragePct}%`,
+        message: `any-map scan: top-3 greedy cumulative coverage ${cov}% is below threshold ${failTop3}%`,
       };
     }
   }

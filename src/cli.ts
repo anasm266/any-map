@@ -18,18 +18,32 @@ program
   .description("Static flow analysis for TypeScript `any` types.")
   .version(__ANY_MAP_VERSION__);
 
-function parseFailCoverageOpt(raw: string | undefined): number | undefined {
+function parsePctOpt(
+  raw: string | undefined,
+  label: string,
+): number | undefined {
   if (raw === undefined) return undefined;
   const t = raw.trim().replace(/%$/, "");
   const n = Number.parseFloat(t);
   if (!Number.isFinite(n) || n < 0 || n > 100) {
     console.error(
-      "any-map scan: --fail-coverage must be a number from 0 to 100 (optional % suffix)",
+      `any-map scan: ${label} must be a number from 0 to 100 (optional % suffix)`,
     );
     process.exitCode = 1;
     return undefined;
   }
   return n;
+}
+
+function parseReportVersion(
+  raw: string | undefined,
+  cmd: string,
+): 1 | 2 | undefined {
+  if (raw === undefined) return undefined;
+  if (raw === "1" || raw === "2") return Number(raw) as 1 | 2;
+  console.error(`${cmd}: --report-version must be 1 or 2`);
+  process.exitCode = 1;
+  return undefined;
 }
 
 function parseFailAboveOpt(raw: string | undefined): number | undefined {
@@ -52,9 +66,12 @@ function scanFormatFromOpts(opts: {
     if (
       opts.format !== "table" &&
       opts.format !== "json" &&
-      opts.format !== "dot"
+      opts.format !== "dot" &&
+      opts.format !== "sarif"
     ) {
-      console.error("any-map scan: --format must be table, json, or dot");
+      console.error(
+        "any-map scan: --format must be table, json, dot, or sarif",
+      );
       process.exitCode = 1;
       return undefined;
     }
@@ -70,8 +87,12 @@ function diffFormatFromOpts(opts: {
 }): DiffCliFormat | undefined {
   if (process.exitCode) return undefined;
   if (opts.format !== undefined) {
-    if (opts.format !== "table" && opts.format !== "json") {
-      console.error("any-map diff: --format must be table or json");
+    if (
+      opts.format !== "table" &&
+      opts.format !== "json" &&
+      opts.format !== "sarif"
+    ) {
+      console.error("any-map diff: --format must be table, json, or sarif");
       process.exitCode = 1;
       return undefined;
     }
@@ -87,12 +108,20 @@ program
     "Classify `any` sources, graph + propagation, blast + greedy ranking; optional DOT / JSON.",
   )
   .argument("[path]", "Project file, directory, or tsconfig root", ".")
-  .option("--format <mode>", "Output: table, json, or dot (Graphviz)")
+  .option("--format <mode>", "Output: table, json, dot (Graphviz), or sarif")
+  .option(
+    "--report-version <n>",
+    "JSON report schema version (default 2; use 1 for legacy flat ScanSummary)",
+  )
   .option("--json", "Same as --format json", false)
   .option(
     "--dump-graph",
     "Emit intra-module graph JSON (nodes + edges + infectedBy)",
     false,
+  )
+  .option(
+    "--max-files <n>",
+    "Cap TypeScript program root files (escape hatch for huge repos)",
   )
   .option(
     "--top <n>",
@@ -112,7 +141,11 @@ program
   )
   .option(
     "--fail-coverage <pct>",
-    "Exit 1 if top-3 greedy cumulative coverage %% is below pct (0–100, optional %% suffix)",
+    "(deprecated) alias for --fail-top3-greedy-pct",
+  )
+  .option(
+    "--fail-top3-greedy-pct <pct>",
+    "Exit 1 if top-3 greedy cumulative coverage is below pct (0–100)",
   )
   .action(
     async (
@@ -126,14 +159,30 @@ program
         ignore?: string;
         failAbove?: string;
         failCoverage?: string;
+        failTop3GreedyPct?: string;
+        reportVersion?: string;
+        maxFiles?: string;
       },
     ) => {
       const format = scanFormatFromOpts(opts);
       if (format === undefined) return;
 
-      const flags: Parameters<typeof runScanCommand>[1] = { format };
+      const flags: Parameters<typeof runScanCommand>[1] = {
+        format,
+        toolVersion: __ANY_MAP_VERSION__,
+      };
       if (opts.json === true) flags.json = true;
       if (opts.dumpGraph === true) flags.dumpGraph = true;
+
+      if (opts.maxFiles !== undefined) {
+        const n = Number.parseInt(opts.maxFiles, 10);
+        if (!Number.isInteger(n) || n < 1) {
+          console.error("any-map scan: --max-files must be a positive integer");
+          process.exitCode = 1;
+          return;
+        }
+        flags.maxFiles = n;
+      }
 
       if (opts.top !== undefined) {
         const n = Number.parseInt(opts.top, 10);
@@ -165,10 +214,22 @@ program
         flags.failAbove = v;
       }
 
+      const rv = parseReportVersion(opts.reportVersion, "any-map scan");
+      if (rv !== undefined) flags.reportVersion = rv;
+
       if (opts.failCoverage !== undefined) {
-        const v = parseFailCoverageOpt(opts.failCoverage);
+        console.warn(
+          "any-map scan: --fail-coverage is deprecated; use --fail-top3-greedy-pct",
+        );
+        const v = parsePctOpt(opts.failCoverage, "--fail-coverage");
         if (v === undefined) return;
         flags.failCoveragePct = v;
+      }
+
+      if (opts.failTop3GreedyPct !== undefined) {
+        const v = parsePctOpt(opts.failTop3GreedyPct, "--fail-top3-greedy-pct");
+        if (v === undefined) return;
+        flags.failTop3GreedyPct = v;
       }
 
       await runScanCommand(path, flags);
@@ -183,8 +244,27 @@ program
   .argument("<base>", "Base ref (merge-base is computed against head)")
   .argument("<head>", "Head ref to analyze")
   .argument("[path]", "Project file, directory, or tsconfig root", ".")
-  .option("--format <mode>", "Output: table or json")
+  .option("--format <mode>", "Output: table, json, or sarif")
   .option("--json", "Same as --format json", false)
+  .option(
+    "--report-version <n>",
+    "JSON report schema version (default 2; use 1 for legacy DiffSummary)",
+  )
+  .option("--fail-on-new-sources", "Exit 1 if any new sources appear in scope")
+  .option(
+    "--fail-on-infected-increase",
+    "Exit 1 if infected node count increased",
+  )
+  .option(
+    "--fail-on-blast-increase",
+    "Exit 1 if any source blast radius increased",
+  )
+  .option(
+    "--max-new-sources <n>",
+    "Exit 1 if more than N new sources appear in scope",
+  )
+  .option("--no-cache", "Disable `.any-map-cache/` when diffing", false)
+  .option("--max-files <n>", "Cap TypeScript program root files per scan")
   .option(
     "--top <n>",
     "Limit rows in added/removed/blast-changed sections and in JSON delta arrays",
@@ -208,12 +288,22 @@ program
         top?: string;
         sourceKinds?: string;
         ignore?: string;
+        reportVersion?: string;
+        failOnNewSources?: boolean;
+        failOnInfectedIncrease?: boolean;
+        failOnBlastIncrease?: boolean;
+        maxNewSources?: string;
+        noCache?: boolean;
+        maxFiles?: string;
       },
     ) => {
       const format = diffFormatFromOpts(opts);
       if (format === undefined) return;
 
-      const flags: Parameters<typeof runDiffCommand>[3] = { format };
+      const flags: Parameters<typeof runDiffCommand>[3] = {
+        format,
+        toolVersion: __ANY_MAP_VERSION__,
+      };
 
       if (opts.json === true) flags.json = true;
 
@@ -239,6 +329,38 @@ program
 
       if (opts.ignore) {
         flags.ignoreGlobs = parseIgnoreGlobsList(opts.ignore);
+      }
+
+      const rv = parseReportVersion(opts.reportVersion, "any-map diff");
+      if (rv !== undefined) flags.reportVersion = rv;
+
+      if (opts.failOnNewSources === true) flags.failOnNewSources = true;
+      if (opts.failOnInfectedIncrease === true)
+        flags.failOnInfectedIncrease = true;
+      if (opts.failOnBlastIncrease === true) flags.failOnBlastIncrease = true;
+
+      if (opts.maxNewSources !== undefined) {
+        const n = Number.parseInt(opts.maxNewSources, 10);
+        if (!Number.isInteger(n) || n < 0) {
+          console.error(
+            "any-map diff: --max-new-sources must be a non-negative integer",
+          );
+          process.exitCode = 1;
+          return;
+        }
+        flags.maxNewSources = n;
+      }
+
+      if (opts.noCache === true) flags.useCache = false;
+
+      if (opts.maxFiles !== undefined) {
+        const n = Number.parseInt(opts.maxFiles, 10);
+        if (!Number.isInteger(n) || n < 1) {
+          console.error("any-map diff: --max-files must be a positive integer");
+          process.exitCode = 1;
+          return;
+        }
+        flags.maxFiles = n;
       }
 
       await runDiffCommand(baseRef, headRef, scanPath, flags);
