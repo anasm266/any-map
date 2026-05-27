@@ -50,34 +50,39 @@ jobs:
         with:
           repository: ${{ matrix.repo }}
           ref: ${{ matrix.ref }}
-          path: bench-repo
+          # Outside the any-map tree so pnpm/corepack does not inherit packageManager from this repo.
+          path: ${{ runner.temp }}/bench-repo
           fetch-depth: 1
 
       - name: Install benchmark dependencies
+        env:
+          BENCH_ROOT: ${{ runner.temp }}/bench-repo
         run: |
           set -euo pipefail
-          if [ -f bench-repo/pnpm-lock.yaml ] || [ -f bench-repo/pnpm-workspace.yaml ]; then
-            cd bench-repo
+          if [ -f "$BENCH_ROOT/pnpm-lock.yaml" ] || [ -f "$BENCH_ROOT/pnpm-workspace.yaml" ]; then
+            cd "$BENCH_ROOT"
             corepack enable
             pnpm install --frozen-lockfile || pnpm install
-          elif [ -f bench-repo/package-lock.json ]; then
-            cd bench-repo
+          elif [ -f "$BENCH_ROOT/package-lock.json" ]; then
+            cd "$BENCH_ROOT"
             npm ci || npm install
-          elif [ -f bench-repo/yarn.lock ]; then
-            cd bench-repo
+          elif [ -f "$BENCH_ROOT/yarn.lock" ]; then
+            cd "$BENCH_ROOT"
             corepack enable
             yarn install --frozen-lockfile || yarn install
-          elif [ -f bench-repo/package.json ]; then
-            cd bench-repo
+          elif [ -f "$BENCH_ROOT/package.json" ]; then
+            cd "$BENCH_ROOT"
             npm install
           fi
 
       - name: Run any-map scan
         id: scan
+        env:
+          BENCH_SCAN: ${{ runner.temp }}/bench-repo/${{ matrix.path }}
         run: |
           set -euo pipefail
           start=$(date +%s)
-          node dist/cli.js scan "bench-repo/${{ matrix.path }}" --format json > scan.json
+          node dist/cli.js scan "$BENCH_SCAN" --format json > scan.json
           end=$(date +%s)
           echo "duration_sec=$((end - start))" >> "$GITHUB_OUTPUT"
           node --input-type=module -e "
