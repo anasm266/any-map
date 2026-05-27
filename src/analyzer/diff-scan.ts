@@ -13,6 +13,7 @@ import {
   resolveMergeBase,
   withSnapshotWorktrees,
 } from "./git-utils.js";
+import { readScanCache, writeScanCache } from "./scan-cache.js";
 import {
   applyTopToScanSummary,
   buildScanOptions,
@@ -24,6 +25,9 @@ export interface DiffScanOptions extends SourceFilters {
   baseRef: string;
   headRef: string;
   top?: number;
+  maxFiles?: number;
+  /** Persist scan summaries under `.any-map-cache/` in the git repo root. */
+  useCache?: boolean;
 }
 
 const SOURCE_EXTENSIONS = new Set([
@@ -197,20 +201,61 @@ function runFullDiffScan(options: Omit<DiffScanOptions, "top">): DiffSummary {
           ? headRoot
           : path.join(headRoot, workspace.scanRootRepoRelative);
 
-      const baseScan = runFullScan(
+      const useCache = options.useCache !== false;
+      const scanOpts = (target: string) =>
         buildScanOptions(
-          baseTargetPath,
+          target,
           options.sourceKinds,
           options.ignoreGlobs,
-        ),
-      ).summary;
-      const headScan = runFullScan(
-        buildScanOptions(
-          headTargetPath,
-          options.sourceKinds,
-          options.ignoreGlobs,
-        ),
-      ).summary;
+          undefined,
+          options.maxFiles,
+        );
+
+      let baseScan = useCache
+        ? readScanCache(
+            workspace.repoRoot,
+            effectiveBaseRef,
+            baseTargetPath,
+            options.sourceKinds,
+            options.ignoreGlobs,
+          )
+        : undefined;
+      if (!baseScan) {
+        baseScan = runFullScan(scanOpts(baseTargetPath)).summary;
+        if (useCache) {
+          writeScanCache(
+            workspace.repoRoot,
+            effectiveBaseRef,
+            baseTargetPath,
+            baseScan,
+            options.sourceKinds,
+            options.ignoreGlobs,
+          );
+        }
+      }
+
+      let headScan = useCache
+        ? readScanCache(
+            workspace.repoRoot,
+            effectiveHeadRef,
+            headTargetPath,
+            options.sourceKinds,
+            options.ignoreGlobs,
+          )
+        : undefined;
+      if (!headScan) {
+        headScan = runFullScan(scanOpts(headTargetPath)).summary;
+        if (useCache) {
+          writeScanCache(
+            workspace.repoRoot,
+            effectiveHeadRef,
+            headTargetPath,
+            headScan,
+            options.sourceKinds,
+            options.ignoreGlobs,
+          );
+        }
+      }
 
       const deltaFiles =
         scope === "full-project-fallback"

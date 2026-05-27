@@ -24,10 +24,18 @@ export function resolveScanRoot(userPath: string): string {
     : abs;
 }
 
+export interface CreateProgramOptions {
+  /** Cap the number of root source files (after tsconfig expansion). */
+  maxFiles?: number;
+}
+
 /**
  * Create a TypeScript program for the tsconfig that governs `rootDir`.
  */
-export function createProgramForDirectory(rootDir: string): ts.Program {
+export function createProgramForDirectory(
+  rootDir: string,
+  opts?: CreateProgramOptions,
+): ts.Program {
   const configPath = ts.findConfigFile(
     rootDir,
     ts.sys.fileExists,
@@ -59,8 +67,13 @@ export function createProgramForDirectory(rootDir: string): ts.Program {
     throw new Error(msg);
   }
 
+  let rootNames = parsed.fileNames;
+  if (opts?.maxFiles !== undefined && opts.maxFiles > 0) {
+    rootNames = rootNames.slice(0, opts.maxFiles);
+  }
+
   const programOptions: ts.CreateProgramOptions = {
-    rootNames: parsed.fileNames,
+    rootNames,
     options: parsed.options,
   };
   if (

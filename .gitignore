@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.any-map-cache/
 coverage/
 .turbo/
 *.tsbuildinfo
