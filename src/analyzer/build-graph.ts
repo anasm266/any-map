@@ -906,6 +906,22 @@ export class GraphBuilder {
     return this.edgeList;
   }
 
+  /** Infected graph node ids per `any` source id (post-`propagate()`). */
+  getInfectedNodeSetsPerSource(): Map<string, Set<string>> {
+    const sourceIds = [...this.nodes.values()]
+      .filter((n) => n.isSource && n.sourceKind !== undefined)
+      .map((n) => n.id);
+    const infectedNodesPerSource = new Map<string, Set<string>>();
+    for (const sid of sourceIds) {
+      const set = new Set<string>();
+      for (const n of this.nodes.values()) {
+        if (n.infectedBy.has(sid)) set.add(n.id);
+      }
+      infectedNodesPerSource.set(sid, set);
+    }
+    return infectedNodesPerSource;
+  }
+
   /**
    * Greedy set-cover: repeatedly pick the `any` source that covers the most still-uncovered infected nodes.
    * Uses per-source infected sets so each pass is O(sources × min(|infected(s)|, |uncovered|)), not O(sources × |nodes|).
@@ -924,18 +940,8 @@ export class GraphBuilder {
       if (n.infectedBy.size > 0) universe.add(n.id);
     }
 
-    const sourceIds = [...this.nodes.values()]
-      .filter((n) => n.isSource && n.sourceKind !== undefined)
-      .map((n) => n.id);
-
-    const infectedNodesPerSource = new Map<string, Set<string>>();
-    for (const sid of sourceIds) {
-      const set = new Set<string>();
-      for (const n of this.nodes.values()) {
-        if (n.infectedBy.has(sid)) set.add(n.id);
-      }
-      infectedNodesPerSource.set(sid, set);
-    }
+    const infectedNodesPerSource = this.getInfectedNodeSetsPerSource();
+    const sourceIds = [...infectedNodesPerSource.keys()];
 
     const uncovered = new Set(universe);
     const picks: GreedyCoverPick[] = [];

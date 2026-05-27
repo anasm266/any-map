@@ -7,9 +7,11 @@ import {
 } from "../analyzer/run-scan.js";
 import type { ScanSummary, SourceKind } from "../types.js";
 import { serializedGraphToDot } from "../format/to-dot.js";
+import { toScanReport, type ReportVersion } from "../format/report-json.js";
+import { scanSummaryToSarif, setSarifToolVersion } from "../format/to-sarif.js";
 import { applyScanFailureResult, evaluateScanFailure } from "./scan-failure.js";
 
-export type ScanCliFormat = "table" | "json" | "dot";
+export type ScanCliFormat = "table" | "json" | "dot" | "sarif";
 
 export interface ScanCliOptions {
   format?: ScanCliFormat;
@@ -21,6 +23,10 @@ export interface ScanCliOptions {
   ignoreGlobs?: string[];
   failAbove?: number;
   failCoveragePct?: number;
+  failTop3GreedyPct?: number;
+  reportVersion?: ReportVersion;
+  toolVersion?: string;
+  maxFiles?: number;
 }
 
 export async function runScanCommand(
@@ -35,6 +41,8 @@ export async function runScanCommand(
     basePath,
     options.sourceKinds,
     options.ignoreGlobs,
+    undefined,
+    options.maxFiles,
   );
 
   if (options.dumpGraph === true) {
@@ -47,8 +55,18 @@ export async function runScanCommand(
   const { summary, serializedGraph } = runFullScan(scanOpts);
   const displaySummary = applyTopToScanSummary(summary, options.top);
 
+  const reportVersion = options.reportVersion ?? 2;
+  if (options.toolVersion) setSarifToolVersion(options.toolVersion);
+
   if (format === "json") {
-    console.log(JSON.stringify(displaySummary, null, 2));
+    const report = toScanReport(displaySummary, reportVersion);
+    console.log(JSON.stringify(report, null, 2));
+    applyScanFailureResult(evaluateScanFailure(summary, options));
+    return;
+  }
+
+  if (format === "sarif") {
+    console.log(JSON.stringify(scanSummaryToSarif(summary), null, 2));
     applyScanFailureResult(evaluateScanFailure(summary, options));
     return;
   }
@@ -60,7 +78,15 @@ export async function runScanCommand(
   }
 
   printScanTables(displaySummary);
+  printScanHealthFooter(displaySummary);
   applyScanFailureResult(evaluateScanFailure(summary, options));
+}
+
+function printScanHealthFooter(summary: ScanSummary): void {
+  if (!summary.health) return;
+  console.log("");
+  console.log(pc.bold("Scan health"));
+  console.log(pc.dim(summary.health.summaryLine));
 }
 
 function printScanTables(summary: ScanSummary): void {
@@ -79,6 +105,7 @@ function printScanTables(summary: ScanSummary): void {
   );
 
   if (n === 0) {
+    printScanHealthFooter(summary);
     return;
   }
 

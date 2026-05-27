@@ -53,6 +53,17 @@ export interface ScanSummary {
   greedyCoverPicks: GreedyCoverPick[];
   /** `any` sources with blast radius, sorted descending (project graph reachability). */
   sourcesRankedByBlast: SourceRanked[];
+  /** Overlap / set-cover interpretability metrics (when graph scan ran). */
+  health?: ScanHealth;
+}
+
+export type SetCoverDistinctiveness = "high" | "low";
+
+export interface ScanHealth {
+  top3GreedyPct: number;
+  medianPairwiseOverlap: number;
+  setCoverDistinctiveness: SetCoverDistinctiveness;
+  summaryLine: string;
 }
 
 export interface BlastChangedSource {

@@ -5,6 +5,7 @@ import type {
   SourceRanked,
 } from "../types.js";
 import { GraphBuilder } from "./build-graph.js";
+import { computeScanHealth } from "./scan-health.js";
 import type { SourceFilters } from "./filter-sources.js";
 import { filterSources } from "./filter-sources.js";
 import { findAnySources } from "./classify-any-sources.js";
@@ -21,6 +22,7 @@ export interface ScanOptions extends SourceFilters {
   dumpGraph?: boolean;
   /** Limit display / JSON list fields to N rows; full scan is computed first. */
   top?: number;
+  maxFiles?: number;
 }
 
 /**
@@ -32,11 +34,13 @@ export function buildScanOptions(
   sourceKinds?: SourceKind[],
   ignoreGlobs?: string[],
   top?: number,
+  maxFiles?: number,
 ): ScanOptions {
   const o: ScanOptions = { targetPath };
   if (sourceKinds !== undefined) o.sourceKinds = sourceKinds;
   if (ignoreGlobs !== undefined) o.ignoreGlobs = ignoreGlobs;
   if (top !== undefined) o.top = top;
+  if (maxFiles !== undefined) o.maxFiles = maxFiles;
   return o;
 }
 
@@ -111,7 +115,9 @@ export function applyTopToScanSummary(
  */
 export function runFullScan(options: ScanOptions): FullScanResult {
   const root = resolveScanRoot(options.targetPath);
-  const program = createProgramForDirectory(root);
+  const programOpts =
+    options.maxFiles !== undefined ? { maxFiles: options.maxFiles } : undefined;
+  const program = createProgramForDirectory(root, programOpts);
   let sources = findAnySources(program, root);
   sources = filterSources(sources, options);
   const fileCount = countProjectSourceFiles(program);
@@ -133,6 +139,13 @@ export function runFullScan(options: ScanOptions): FullScanResult {
     infectedNodeCount,
     greedyCoverPicks,
     sourcesRankedByBlast: ranked,
+    health: computeScanHealth(builder, {
+      sources,
+      fileCount,
+      infectedNodeCount,
+      greedyCoverPicks,
+      sourcesRankedByBlast: ranked,
+    }),
   };
 
   return { summary, serializedGraph: builder.serialize() };
