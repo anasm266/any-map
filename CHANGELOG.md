@@ -1,5 +1,11 @@
 # any-map
 
+## 2.0.0
+
+### Major Changes
+
+- Release 2.0: scan health metrics, JSON report v2, SARIF export, diff CI gates, enhanced GitHub Action (PR summary and annotations), diff scan cache, and `--max-files`. See docs/v2-migration.md.
+
 ## 1.4.0
 
 ### Minor Changes
