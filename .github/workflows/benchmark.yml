@@ -21,16 +21,20 @@ jobs:
         include:
           - repo: colinhacks/zod
             ref: v3.24.2
-            path: packages/zod
+            path: .
+            pm: yarn
           - repo: pmndrs/zustand
             ref: v5.0.3
             path: .
+            pm: pnpm
           - repo: immerjs/immer
             ref: v10.1.1
             path: .
+            pm: yarn
           - repo: sindresorhus/ky
             ref: v1.7.5
             path: .
+            pm: npm
     steps:
       - uses: actions/checkout@v4
 
@@ -57,17 +61,22 @@ jobs:
         working-directory: bench-repo
         run: |
           set -euo pipefail
-          # npx pnpm avoids corepack walking up to any-map's packageManager field.
-          if [ -f pnpm-lock.yaml ] || [ -f pnpm-workspace.yaml ]; then
-            npx --yes pnpm@9 install --frozen-lockfile || npx --yes pnpm@9 install
-          elif [ -f package-lock.json ]; then
-            npm ci || npm install
-          elif [ -f yarn.lock ]; then
-            corepack enable
-            yarn install --frozen-lockfile || yarn install
-          elif [ -f package.json ]; then
-            npm install
-          fi
+          # Use npx so installs do not inherit any-map's corepack packageManager.
+          case "${{ matrix.pm }}" in
+            pnpm)
+              npx --yes pnpm@9 install --frozen-lockfile || npx --yes pnpm@9 install
+              ;;
+            yarn)
+              npx --yes yarn@1.22.22 install --frozen-lockfile || npx --yes yarn@1.22.22 install
+              ;;
+            npm)
+              if [ -f package-lock.json ]; then npm ci || npm install; else npm install; fi
+              ;;
+            *)
+              echo "Unknown package manager: ${{ matrix.pm }}" >&2
+              exit 1
+              ;;
+          esac
 
       - name: Run any-map scan
         id: scan
