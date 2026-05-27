@@ -40,9 +40,7 @@ function key(
 }
 
 describe("fixture recall metrics (CI gate)", () => {
-  it(
-    "meets recall and precision thresholds across all fixtures",
-    () => {
+  it("meets recall and precision thresholds across all fixtures", () => {
     let totalExpected = 0;
     let totalActual = 0;
     let truePositives = 0;
@@ -76,7 +74,5 @@ describe("fixture recall metrics (CI gate)", () => {
     expect(precision, `precision ${precision}`).toBeGreaterThanOrEqual(
       PRECISION_MIN,
     );
-    },
-    60_000,
-  );
+  }, 60_000);
 });

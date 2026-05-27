@@ -15,7 +15,22 @@ A single `any` in a utility can propagate through assignments, destructuring, an
 
 **Published on npm:** [`any-map@2`](https://www.npmjs.com/package/any-map). Algorithm details: [PLAN.md](./PLAN.md). **Migrating from 1.x:** [docs/v2-migration.md](./docs/v2-migration.md).
 
-**v2.0** focuses on CI and PR workflows: scan **health** metrics (overlap + honest top-3 greedy interpretation), **diff fail gates**, **JSON report v2**, **SARIF** export, an enhanced **GitHub Action** (PR summary + annotations), and **diff scan caching**.
+## What's new in v2
+
+v2 keeps the same analyzer core as 1.4 (graph, propagation, blast, set-cover, `diff`) and adds **team workflow** features:
+
+| Feature                   | What you get                                                                                                                             |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Scan health**           | After each `scan`, see median source overlap + whether greedy “fix order” is meaningful on _your_ repo (not a fake “fix 3 = 80%” story). |
+| **`any-map diff` gates**  | `--fail-on-new-sources`, `--fail-on-infected-increase`, `--fail-on-blast-increase`, `--max-new-sources` for PR checks.                   |
+| **JSON report v2**        | Structured output (`reportVersion: 2`) with `summary`, `rankings`, and `health`. Legacy flat JSON via `--report-version 1`.              |
+| **SARIF**                 | `--format sarif` on `scan` and `diff` for GitHub Code Scanning and other SARIF consumers.                                                |
+| **Clearer scan CI flags** | `--fail-top3-greedy-pct` replaces the confusing `--fail-coverage` name (old flag still works with a deprecation warning).                |
+| **GitHub Action**         | Pin `version: "2"`; `command: diff` writes a **PR summary** and up to 10 **workflow annotations** on new sources.                        |
+| **Diff scan cache**       | Reuses summaries in `.any-map-cache/` keyed by commit (disable with `--no-cache`).                                                       |
+| **`--max-files`**         | Cap TypeScript program size on huge trees.                                                                                               |
+
+Install: `npm i -D any-map@2` or `npx any-map@2`. Migration: [docs/v2-migration.md](./docs/v2-migration.md).
 
 ## What it does
 
@@ -109,30 +124,32 @@ By blast radius
 2. **Build** a directed graph where each edge represents type flow (`const a = b` → `b` → `a`, plus direct intra-project call/import edges).
 3. **Propagate** from each source with forward BFS; nodes track `infectedBy` source ids.
 4. **Rank** by blast radius; run **greedy set-cover** over infected nodes for fix order and cumulative %.
-5. **Emit** table, JSON, or DOT.
+5. **Emit** table, JSON, DOT, or SARIF; optional **health** interpretation.
 
 Details: [PLAN.md §5](./PLAN.md#5-algorithms).
 
 ## Why not only type-coverage / ESLint?
 
-| Tool                                 | What it tells you                     | What any-map adds                    |
-| ------------------------------------ | ------------------------------------- | ------------------------------------ |
-| `tsc --noImplicitAny`                | Where `any` is inferred               | —                                    |
-| `@typescript-eslint/no-explicit-any` | Where `any` is written                | —                                    |
-| `type-coverage`                      | % of typed identifiers                | —                                    |
-| **any-map**                          | Source → infection graph, blast, rank | Propagation + greedy order + `trace` |
+| Tool                                 | What it tells you                     | What any-map adds                                                    |
+| ------------------------------------ | ------------------------------------- | -------------------------------------------------------------------- |
+| `tsc --noImplicitAny`                | Where `any` is inferred               | —                                                                    |
+| `@typescript-eslint/no-explicit-any` | Where `any` is written                | —                                                                    |
+| `type-coverage`                      | % of typed identifiers                | —                                                                    |
+| **any-map**                          | Source → infection graph, blast, rank | Propagation + greedy order + `trace` + **PR diff gates** + **SARIF** |
+
+Use **type-coverage** for a single “% typed” score; use **any-map** to prioritize _which_ `any` origins matter and block new ones in PRs. See [docs/integrations/type-coverage.md](./docs/integrations/type-coverage.md).
 
 ## Changelog and design
 
 [CHANGELOG.md](./CHANGELOG.md) · [PLAN.md](./PLAN.md) (algorithms, scope, test strategy).
 
-## Scope boundaries (v1 non-goals)
+## Scope boundaries
 
 - No full inference through generics / conditionals / distributive types (surface at usage only).
 - No full callsite-sensitive interprocedural analysis across complex re-export chains, dynamic dispatch, or overload/generic specialization; direct resolved callees plus import/re-export hops are followed across project files.
-- No auto-fix, no LSP, no git history — see [PLAN.md §9](./PLAN.md#9-scope-boundaries-non-goals-for-v1).
+- No built-in LSP extension (see [docs/editor-vscode.md](./docs/editor-vscode.md) for a task snippet); no `history` command yet.
 
-**Future direction (post–v1 scope):** broaden cross-module flow beyond direct import/re-export hops with deeper callsite sensitivity, overload/generic awareness, and more complex expression forms.
+**Planned for 2.x minors:** deeper graph edges, bitset performance, monorepo `--project` flag. See [PLAN.md](./PLAN.md).
 
 ## Maintainer / release notes
 

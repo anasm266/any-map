@@ -54,22 +54,28 @@ jobs:
           fetch-depth: 1
 
       - name: Install benchmark dependencies
-        working-directory: bench-repo/${{ matrix.path }}
         run: |
-          if [ -f pnpm-lock.yaml ]; then
+          set -euo pipefail
+          if [ -f bench-repo/pnpm-lock.yaml ] || [ -f bench-repo/pnpm-workspace.yaml ]; then
+            cd bench-repo
             corepack enable
             pnpm install --frozen-lockfile || pnpm install
-          elif [ -f package-lock.json ]; then
+          elif [ -f bench-repo/package-lock.json ]; then
+            cd bench-repo
             npm ci || npm install
-          elif [ -f yarn.lock ]; then
+          elif [ -f bench-repo/yarn.lock ]; then
+            cd bench-repo
             corepack enable
             yarn install --frozen-lockfile || yarn install
+          elif [ -f bench-repo/package.json ]; then
+            cd bench-repo
+            npm install
           fi
-        continue-on-error: true
 
       - name: Run any-map scan
         id: scan
         run: |
+          set -euo pipefail
           start=$(date +%s)
           node dist/cli.js scan "bench-repo/${{ matrix.path }}" --format json > scan.json
           end=$(date +%s)

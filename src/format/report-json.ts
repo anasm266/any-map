@@ -3,7 +3,7 @@ import { summarizeDiffTotals } from "../analyzer/diff-scan.js";
 
 export type ReportVersion = 1 | 2;
 
-export interface ScanReportV1 extends ScanSummary {}
+export type ScanReportV1 = ScanSummary;
 
 export interface ScanReportV2 {
   reportVersion: 2;
