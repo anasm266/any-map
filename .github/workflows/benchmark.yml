@@ -49,16 +49,15 @@ jobs:
 
       - run: pnpm build
 
-      - name: Checkout benchmark repo
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ matrix.repo }}
-          ref: ${{ matrix.ref }}
-          path: bench-repo
-          fetch-depth: 1
+      - name: Clone benchmark repo
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch "${{ matrix.ref }}" \
+            "https://github.com/${{ matrix.repo }}.git" \
+            /tmp/bench-repo
 
       - name: Install benchmark dependencies
-        working-directory: bench-repo
+        working-directory: /tmp/bench-repo
         run: |
           set -euo pipefail
           # Use npx so installs do not inherit any-map's corepack packageManager.
@@ -83,7 +82,7 @@ jobs:
         run: |
           set -euo pipefail
           start=$(date +%s)
-          node dist/cli.js scan "bench-repo/${{ matrix.path }}" --format json > scan.json
+          node dist/cli.js scan "/tmp/bench-repo/${{ matrix.path }}" --format json > scan.json
           end=$(date +%s)
           echo "duration_sec=$((end - start))" >> "$GITHUB_OUTPUT"
           node --input-type=module -e "
