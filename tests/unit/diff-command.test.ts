@@ -78,9 +78,11 @@ describe("runDiffCommand", () => {
 
     expect(logs).toHaveLength(1);
     const parsed = JSON.parse(logs[0]!);
-    expect(parsed.compareMode).toBe("merge-base");
-    expect(parsed.scope).toBe("changed-files");
-    expect(parsed.addedSources[0]?.name).toBe("leaked");
+    expect(parsed.reportVersion).toBe(2);
+    expect(parsed.meta?.compareMode ?? parsed.compareMode).toBe("merge-base");
+    expect(parsed.meta?.scope ?? parsed.scope).toBe("changed-files");
+    const added = parsed.diff?.addedSources ?? parsed.addedSources;
+    expect(added[0]?.name).toBe("leaked");
   }, 20_000);
 
   it("omits empty delta sections in table output", async () => {
