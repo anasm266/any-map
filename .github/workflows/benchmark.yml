@@ -1,0 +1,100 @@
+name: Benchmark
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    name: OSS scan smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - repo: colinhacks/zod
+            ref: v3.24.2
+            path: packages/zod
+          - repo: pmndrs/zustand
+            ref: v5.0.3
+            path: .
+          - repo: immerjs/immer
+            ref: v10.1.1
+            path: .
+          - repo: sindresorhus/ky
+            ref: v1.7.5
+            path: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      - name: Checkout benchmark repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ matrix.repo }}
+          ref: ${{ matrix.ref }}
+          path: bench-repo
+          fetch-depth: 1
+
+      - name: Install benchmark dependencies
+        working-directory: bench-repo/${{ matrix.path }}
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            corepack enable
+            pnpm install --frozen-lockfile || pnpm install
+          elif [ -f package-lock.json ]; then
+            npm ci || npm install
+          elif [ -f yarn.lock ]; then
+            corepack enable
+            yarn install --frozen-lockfile || yarn install
+          fi
+        continue-on-error: true
+
+      - name: Run any-map scan
+        id: scan
+        run: |
+          start=$(date +%s)
+          node dist/cli.js scan "bench-repo/${{ matrix.path }}" --format json > scan.json
+          end=$(date +%s)
+          echo "duration_sec=$((end - start))" >> "$GITHUB_OUTPUT"
+          node --input-type=module -e "
+            import fs from 'node:fs';
+            const s = JSON.parse(fs.readFileSync('scan.json', 'utf8'));
+            const picks = s.rankings?.greedyCoverPicks ?? s.greedyCoverPicks ?? [];
+            const top3 = picks.length
+              ? picks[Math.min(2, picks.length - 1)].cumulativeCoveragePct
+              : 100;
+            const sources = s.summary?.sources ?? s.sources ?? [];
+            console.log('sources', sources.length);
+            console.log('infected', s.summary?.infectedNodeCount ?? s.infectedNodeCount);
+            console.log('top3_greedy_pct', top3);
+            console.log('health', (s.health ?? {}).setCoverDistinctiveness);
+          "
+
+      - name: Upload scan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-${{ strategy.job-index }}
+          path: scan.json
+          if-no-files-found: error
+
+      - name: Soft perf budget (zod)
+        if: matrix.repo == 'colinhacks/zod'
+        run: test "${{ steps.scan.outputs.duration_sec }}" -le 120
