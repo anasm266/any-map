@@ -13,7 +13,7 @@ A single `any` in a utility can propagate through assignments, destructuring, an
 
 ## Status
 
-**Published on npm:** [`any-map@2`](https://www.npmjs.com/package/any-map). Algorithm details: [PLAN.md](./PLAN.md). **Migrating from 1.x:** [docs/v2-migration.md](./docs/v2-migration.md).
+**Published on npm:** [`any-map@2`](https://www.npmjs.com/package/any-map). Algorithm details: [docs/architecture.md](./docs/architecture.md). **Migrating from 1.x:** [docs/v2-migration.md](./docs/v2-migration.md).
 
 ## What's new in v2
 
@@ -120,13 +120,13 @@ By blast radius
 
 ## How it works
 
-1. **Classify** every `any` source (explicit `: any`, `as any`, untyped imports, untyped returns, `catch (e)`, implicit params — see [PLAN.md](./PLAN.md)).
+1. **Classify** every `any` source (explicit `: any`, `as any`, untyped imports, untyped returns, `catch (e)`, implicit params — see [docs/architecture.md](./docs/architecture.md)).
 2. **Build** a directed graph where each edge represents type flow (`const a = b` → `b` → `a`, plus direct intra-project call/import edges).
 3. **Propagate** from each source with forward BFS; nodes track `infectedBy` source ids.
 4. **Rank** by blast radius; run **greedy set-cover** over infected nodes for fix order and cumulative %.
 5. **Emit** table, JSON, DOT, or SARIF; optional **health** interpretation.
 
-Details: [PLAN.md §5](./PLAN.md#5-algorithms).
+Details: [docs/architecture.md](./docs/architecture.md).
 
 ## Why not only type-coverage / ESLint?
 
@@ -141,7 +141,7 @@ Use **type-coverage** for a single “% typed” score; use **any-map** to prior
 
 ## Changelog and design
 
-[CHANGELOG.md](./CHANGELOG.md) · [PLAN.md](./PLAN.md) (algorithms, scope, test strategy).
+[CHANGELOG.md](./CHANGELOG.md) · [docs/architecture.md](./docs/architecture.md) (data model and algorithms).
 
 ## Scope boundaries
 
@@ -149,7 +149,7 @@ Use **type-coverage** for a single “% typed” score; use **any-map** to prior
 - No full callsite-sensitive interprocedural analysis across complex re-export chains, dynamic dispatch, or overload/generic specialization; direct resolved callees plus import/re-export hops are followed across project files.
 - No built-in LSP extension (see [docs/editor-vscode.md](./docs/editor-vscode.md) for a task snippet); no `history` command yet.
 
-**Planned for 2.x minors:** deeper graph edges, bitset performance, monorepo `--project` flag. See [PLAN.md](./PLAN.md).
+**Planned for 2.x minors:** deeper graph edges, bitset performance, monorepo `--project` flag.
 
 ## Maintainer / release notes
 
